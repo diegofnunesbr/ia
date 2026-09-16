@@ -219,6 +219,46 @@ setInterval(() => {
 // to the session's next chat message (consumed once, then cleared).
 const pendingDocuments = new Map() // from -> { text, filename }
 
+const KNOWN_TOOL_NAMES = new Set(TOOLS.map((t) => t.function.name))
+
+// Finds every balanced {...} object in the text (not a regex - a naive
+// non-greedy regex breaks on nested braces like `"arguments": {...}`).
+function extractJsonObjects(text) {
+  const objects = []
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== '{') continue
+    let depth = 0
+    for (let j = i; j < text.length; j++) {
+      if (text[j] === '{') depth++
+      else if (text[j] === '}') {
+        depth--
+        if (depth === 0) {
+          try {
+            objects.push(JSON.parse(text.slice(i, j + 1)))
+          } catch {
+            // not valid JSON after all - ignore
+          }
+          break
+        }
+      }
+    }
+  }
+  return objects
+}
+
+// Some Qwen builds under Ollama write the tool call as literal text in
+// the message content ("<tool_call>{...}</tool_call>" or bare JSON)
+// instead of the structured tool_calls field we ask for - this recovers
+// it so the call still actually runs instead of being shown to the user
+// as raw text.
+function extractFallbackToolCalls(content) {
+  if (!content) return null
+  const calls = extractJsonObjects(content)
+    .filter((obj) => KNOWN_TOOL_NAMES.has(obj.name))
+    .map((obj) => ({ function: { name: obj.name, arguments: obj.arguments || {} } }))
+  return calls.length ? calls : null
+}
+
 async function runTool(name, args) {
   if (name === 'list_whatsapp_groups') {
     try {
@@ -372,6 +412,14 @@ app.post('/message', async (req, res) => {
         TOOLS,
         controller.signal
       )
+
+      if (!message.tool_calls?.length) {
+        const fallback = extractFallbackToolCalls(message.content)
+        if (fallback) {
+          message.tool_calls = fallback
+          message.content = ''
+        }
+      }
 
       if (!message.tool_calls?.length) {
         await appendMessage(from, { role: 'assistant', content: message.content })
