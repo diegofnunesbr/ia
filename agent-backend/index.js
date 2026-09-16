@@ -83,7 +83,7 @@ function buildSystemPrompt() {
     dateStyle: 'full',
     timeStyle: 'short',
   }).format(new Date())
-  return `${SYSTEM_PROMPT}\n\nData e hora atual: ${now}.`
+  return `${SYSTEM_PROMPT}\n\nIMPORTANTE - data e hora: ${now}. Essa é a data/hora real agora,\nvinda do relógio do sistema. Use exatamente esse valor sempre que precisar\nsaber "hoje", "agora" ou calcular datas - nunca chute ou use uma data do\nseu treinamento, mesmo que pareça diferente do que você "lembra".`
 }
 
 const TOOLS = [

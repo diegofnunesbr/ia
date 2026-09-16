@@ -129,8 +129,17 @@ function addTypingIndicator() {
   return el
 }
 
+let waitingForReply = false
+
 async function sendMessage(text) {
   if (!text.trim()) return
+  // Ollama only handles one request at a time (OLLAMA_NUM_PARALLEL=1) -
+  // sending another message before the first finishes just queues it up
+  // and makes both take longer, with no feedback why.
+  if (waitingForReply) return
+
+  waitingForReply = true
+  input.disabled = true
   addMessage('user', text)
   input.value = ''
 
@@ -152,6 +161,9 @@ async function sendMessage(text) {
     addMessage('assistant', 'Erro ao falar com o assistente.')
     console.error(err)
   } finally {
+    waitingForReply = false
+    input.disabled = false
+    input.focus()
     renderSessionList()
   }
 }
