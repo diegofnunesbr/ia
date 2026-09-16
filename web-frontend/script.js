@@ -286,7 +286,10 @@ fileInput.addEventListener('change', async () => {
       addMessage('assistant', data.error || 'Não consegui ler esse arquivo.')
       return
     }
-    addMessage('assistant', 'Documento lido, pode perguntar sobre ele.')
+    const message = data.downloadUrl
+      ? 'Convertido para PDF - já pode baixar. Também posso responder sobre o conteúdo.'
+      : 'Documento lido, pode perguntar sobre ele.'
+    addMessage('assistant', message, data.downloadUrl)
   } catch (err) {
     addMessage('assistant', 'Erro ao enviar o arquivo.')
     console.error(err)

@@ -1,5 +1,6 @@
 import { createWorker } from 'tesseract.js'
 import pdfParse from 'pdf-parse'
+import { PDFDocument } from 'pdf-lib'
 
 const TESSDATA_DIR = process.env.TESSDATA_DIR || '/app/tessdata'
 const OCR_LANG = process.env.OCR_LANG || 'por'
@@ -33,4 +34,15 @@ export async function extractText(buffer, mimetype) {
   }
 
   return null
+}
+
+// Wraps a single image in its own PDF page, sized to the image - not a
+// scan-to-searchable-PDF conversion, just packaging the image as PDF.
+export async function imageToPdf(buffer, mimetype) {
+  const pdfDoc = await PDFDocument.create()
+  const image =
+    mimetype === 'image/png' ? await pdfDoc.embedPng(buffer) : await pdfDoc.embedJpg(buffer)
+  const page = pdfDoc.addPage([image.width, image.height])
+  page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height })
+  return Buffer.from(await pdfDoc.save())
 }
