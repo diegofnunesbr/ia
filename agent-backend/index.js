@@ -343,11 +343,12 @@ async function runTool(name, args) {
   return { error: `ferramenta desconhecida: ${name}` }
 }
 
-async function callOllama(messages) {
+async function callOllama(messages, signal) {
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, stream: false }),
+    signal,
   })
   if (!res.ok) throw new Error(`ollama returned ${res.status}`)
   const data = await res.json()
@@ -384,11 +385,21 @@ app.post('/message', async (req, res) => {
 
   await appendMessage(from, { role: 'user', content: userContent })
 
+  // Lets a client-cancelled request (browser closed tab / hit "Cancelar")
+  // actually stop the Ollama generation, instead of just giving up on
+  // listening while it keeps hogging the single processing slot
+  // (OLLAMA_NUM_PARALLEL=1) in the background.
+  const controller = new AbortController()
+  req.on('close', () => controller.abort())
+
   try {
     let downloadUrl
     for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
       const recent = await getRecentMessages(from, MAX_HISTORY_MESSAGES)
-      const message = await callOllama([{ role: 'system', content: buildSystemPrompt() }, ...recent])
+      const message = await callOllama(
+        [{ role: 'system', content: buildSystemPrompt() }, ...recent],
+        controller.signal
+      )
 
       if (!message.tool_calls?.length) {
         await appendMessage(from, { role: 'assistant', content: message.content })
@@ -415,8 +426,12 @@ app.post('/message', async (req, res) => {
       downloadUrl,
     })
   } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('message cancelled by client, generation stopped')
+      return
+    }
     console.error('agent failed', err)
-    res.status(500).json({ error: 'agent failed' })
+    if (!res.headersSent) res.status(500).json({ error: 'agent failed' })
   }
 })
 

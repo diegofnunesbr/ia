@@ -120,10 +120,20 @@ function speak(text) {
   speechSynthesis.speak(utterance)
 }
 
-function addTypingIndicator() {
+function addTypingIndicator(onCancel) {
   const el = document.createElement('div')
   el.className = 'msg assistant typing'
-  el.textContent = 'Pensando...'
+
+  const label = document.createElement('span')
+  label.textContent = 'Pensando...'
+  el.appendChild(label)
+
+  const cancelBtn = document.createElement('button')
+  cancelBtn.textContent = 'Cancelar'
+  cancelBtn.className = 'cancel-btn'
+  cancelBtn.addEventListener('click', onCancel)
+  el.appendChild(cancelBtn)
+
   messagesEl.appendChild(el)
   messagesEl.scrollTop = messagesEl.scrollHeight
   return el
@@ -143,13 +153,15 @@ async function sendMessage(text) {
   addMessage('user', text)
   input.value = ''
 
-  const typingEl = addTypingIndicator()
+  const controller = new AbortController()
+  const typingEl = addTypingIndicator(() => controller.abort())
 
   try {
     const res = await fetch('/api/message', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ from: sessionId, text }),
+      signal: controller.signal,
     })
     const data = await res.json()
     const reply = data.reply || 'Desculpa, não consegui responder agora.'
@@ -158,8 +170,12 @@ async function sendMessage(text) {
     speak(reply)
   } catch (err) {
     typingEl.remove()
-    addMessage('assistant', 'Erro ao falar com o assistente.')
-    console.error(err)
+    if (err.name === 'AbortError') {
+      addMessage('assistant', 'Cancelado.')
+    } else {
+      addMessage('assistant', 'Erro ao falar com o assistente.')
+      console.error(err)
+    }
   } finally {
     waitingForReply = false
     input.disabled = false
