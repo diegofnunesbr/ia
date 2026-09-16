@@ -89,6 +89,8 @@ document.addEventListener('click', async (e) => {
 })
 
 function addMessage(role, text, downloadUrl) {
+  document.getElementById('emptyState')?.remove()
+
   const el = document.createElement('div')
   el.className = `msg ${role}`
   if (role === 'assistant') {
@@ -109,8 +111,12 @@ function addMessage(role, text, downloadUrl) {
   messagesEl.scrollTop = messagesEl.scrollHeight
 }
 
+function resetMessages() {
+  messagesEl.innerHTML = '<div id="emptyState" class="empty-state"><p>Como posso ajudar hoje?</p></div>'
+}
+
 function renderMessages(messages) {
-  messagesEl.innerHTML = ''
+  resetMessages()
   for (const m of messages) addMessage(m.role, m.content)
 }
 
@@ -156,7 +162,7 @@ async function startNewSession() {
   const id = newSessionId()
   await apiCreateSession(id)
   setCurrentSession(id)
-  messagesEl.innerHTML = ''
+  resetMessages()
   renderSessionList()
   sidebar.classList.remove('open')
 }
@@ -205,7 +211,7 @@ let activeController = null
 function setWaiting(waiting) {
   waitingForReply = waiting
   input.disabled = waiting
-  sendBtn.textContent = waiting ? 'Parar' : 'Enviar'
+  sendBtn.title = waiting ? 'Parar' : 'Enviar'
   sendBtn.classList.toggle('stop', waiting)
 }
 

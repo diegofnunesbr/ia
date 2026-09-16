@@ -19,7 +19,7 @@ body {
   width: 260px;
   flex-shrink: 0;
   background: #f5f6f8;
-  border-right: 1px solid #e2e5ea;
+  border-right: 1px solid #d5d9e0;
   display: flex;
   flex-direction: column;
   padding: 12px;
@@ -67,6 +67,7 @@ body {
   gap: 6px;
   padding: 8px 10px;
   border-radius: 8px;
+  border-left: 3px solid transparent;
   cursor: pointer;
   font-size: 13px;
   color: #454952;
@@ -77,8 +78,10 @@ body {
 }
 
 .session-item.active {
-  background: #dbe6fb;
+  background: #e4ecfc;
+  border-left-color: #2f6feb;
   color: #14161c;
+  font-weight: 500;
 }
 
 .session-item .title {
@@ -91,14 +94,16 @@ body {
 .session-item .delete-btn {
   background: none;
   border: none;
-  color: #8a8f9c;
+  color: #a4a9b3;
   cursor: pointer;
   padding: 2px 4px;
   font-size: 14px;
+  border-radius: 4px;
 }
 
 .session-item .delete-btn:hover {
   color: #e0393e;
+  background: #fbe9e9;
 }
 
 .menu-toggle {
@@ -130,6 +135,17 @@ body {
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
+}
+
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a8f9c;
+  font-size: 22px;
+  font-weight: 500;
+  text-align: center;
 }
 
 .msg {
@@ -206,39 +222,91 @@ body {
 }
 
 .composer {
-  display: flex;
-  gap: 8px;
   padding: 12px;
-  border-top: 1px solid #e2e5ea;
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
 }
 
-.composer input {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 8px;
+.composer-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px 6px 10px;
+  border-radius: 26px;
   border: 1px solid #d5d9e0;
   background: #ffffff;
+  box-shadow: 0 1px 3px #0000000f;
+}
+
+.composer input {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #1a1d24;
+  font-size: 15px;
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background: #eef0f3;
   color: #1a1d24;
 }
 
-.composer button {
-  padding: 10px 14px;
-  border-radius: 8px;
+#mic.recording {
+  background: #fbe9e9;
+  color: #e0393e;
+}
+
+.send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
   border: none;
   background: #2f6feb;
   color: white;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-#sendBtn.stop {
+.send-btn:hover {
+  background: #2a63d1;
+}
+
+.send-btn .stop-icon {
+  display: none;
+}
+
+.send-btn.stop {
   background: #e0393e;
 }
 
-#mic.recording {
-  background: #e0393e;
+.send-btn.stop .send-icon {
+  display: none;
+}
+
+.send-btn.stop .stop-icon {
+  display: block;
 }
 
 .download-link {
