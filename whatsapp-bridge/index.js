@@ -1,5 +1,6 @@
 import express from 'express'
 import qrcode from 'qrcode-terminal'
+import QRCode from 'qrcode'
 import pino from 'pino'
 import makeWASocket, {
   useMultiFileAuthState,
@@ -27,6 +28,8 @@ const logger = pino({ level: process.env.LOG_LEVEL || 'info' })
 const GROUP_IMAGE_CACHE = new Map() // jid -> [{ msg, timestamp }]
 const IMAGE_CACHE_MAX = 50
 const IMAGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+
+let latestQr = null
 
 function cacheGroupImage(jid, msg) {
   if (!msg.message?.imageMessage) return
@@ -91,6 +94,10 @@ async function startSocket() {
     if (qr) {
       logger.info('Scan the QR code below with WhatsApp (Linked devices):')
       qrcode.generate(qr, { small: true })
+      // Terminal ASCII QR renders unreliably outside a real terminal
+      // (copy/paste, other tools) - keep the raw string so /qr can also
+      // serve it as an actual scannable image.
+      latestQr = qr
     }
     if (connection === 'close') {
       const shouldReconnect =
@@ -313,6 +320,16 @@ app.post('/groups/:jid/convert-images', async (req, res) => {
     logger.error({ err, jid }, 'failed to convert group images')
     res.status(500).json({ error: 'conversion failed' })
   }
+})
+
+// Real scannable PNG, since the terminal ASCII QR often renders broken
+// outside an actual terminal (editors, log viewers, etc.). Access via
+// `kubectl port-forward -n ia svc/whatsapp-bridge 3001:3001` and open
+// http://localhost:3001/qr in a browser.
+app.get('/qr', async (_req, res) => {
+  if (!latestQr) return res.status(404).send('Nenhum QR code pendente no momento.')
+  res.setHeader('content-type', 'image/png')
+  QRCode.toFileStream(res, latestQr, { width: 400 })
 })
 
 app.get('/health', (_req, res) => res.json({ ok: true }))
