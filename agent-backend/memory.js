@@ -1,7 +1,6 @@
 import { pool } from './db.js'
+import { embed } from './llm.js'
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434'
-const EMBED_MODEL = process.env.EMBED_MODEL || 'nomic-embed-text'
 const EMBED_DIMENSIONS = 768
 
 export async function initMemory() {
@@ -14,17 +13,6 @@ export async function initMemory() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `)
-}
-
-async function embed(text) {
-  const res = await fetch(`${OLLAMA_URL}/api/embeddings`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ model: EMBED_MODEL, prompt: text }),
-  })
-  if (!res.ok) throw new Error(`ollama embeddings returned ${res.status}`)
-  const data = await res.json()
-  return data.embedding
 }
 
 export async function rememberFact(content) {

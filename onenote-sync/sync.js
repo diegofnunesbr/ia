@@ -1,12 +1,11 @@
 import { convert as htmlToText } from 'html-to-text'
 import { patchSecret } from './k8s.js'
 import { initNotes, getKnownModifiedTimes, upsertNote } from './db.js'
+import { embed } from './llm.js'
 
 const CLIENT_ID = process.env.ONENOTE_CLIENT_ID
 const REFRESH_TOKEN = process.env.ONENOTE_REFRESH_TOKEN
 const SECRET_NAME = process.env.ONENOTE_SECRET_NAME || 'onenote-sync-secrets'
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434'
-const EMBED_MODEL = process.env.EMBED_MODEL || 'nomic-embed-text'
 const TENANT = 'consumers'
 const CONTENT_MAX_CHARS = 8000
 
@@ -53,16 +52,6 @@ async function fetchPageText(accessToken, pageId) {
   if (!res.ok) throw new Error(`fetch page content failed: ${res.status} ${await res.text()}`)
   const html = await res.text()
   return htmlToText(html, { wordwrap: false }).trim().slice(0, CONTENT_MAX_CHARS)
-}
-
-async function embed(text) {
-  const res = await fetch(`${OLLAMA_URL}/api/embeddings`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ model: EMBED_MODEL, prompt: text }),
-  })
-  if (!res.ok) throw new Error(`ollama embeddings returned ${res.status}`)
-  return (await res.json()).embedding
 }
 
 async function main() {
