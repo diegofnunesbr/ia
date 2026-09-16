@@ -54,6 +54,11 @@ metadata:
     # changes (e.g. the Service gets recreated without a pinned nodePort).
     nginx.ingress.kubernetes.io/auth-signin: "https://auth.home.lan:30277/?rd=$scheme://$http_host$request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    # Same reasoning as web-frontend/nginx.conf: CPU inference can take
+    # well past the 60s default before agent-backend replies.
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
 spec:
   ingressClassName: nginx
   tls:
