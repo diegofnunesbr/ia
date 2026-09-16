@@ -39,9 +39,26 @@ body {
 
 .session-list {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
+}
+
+.logout-btn {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #3a2020;
+  background: transparent;
+  color: #ff8080;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.logout-btn:hover {
+  background: #2a1616;
 }
 
 .session-item {
