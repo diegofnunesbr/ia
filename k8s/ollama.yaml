@@ -65,7 +65,7 @@ spec:
               # we hit before during rollouts.
               memory: 6Gi
             limits:
-              cpu: "6"
+              cpu: "7"
               memory: 10Gi
           readinessProbe:
             tcpSocket:
