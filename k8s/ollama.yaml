@@ -47,12 +47,11 @@ spec:
             # disk each time.
             - name: OLLAMA_MAX_LOADED_MODELS
               value: "2"
-            # Unload idle models after 10 min so the RAM goes back to the
-            # host (and your other Proxmox VMs) when the assistant isn't
-            # in use. Costs a few seconds to reload on the next message
-            # after being idle - raise this if that delay bothers you.
+            # -1 = never unload. VM has 16GB now, plenty of room to keep
+            # the ~5-6GB model resident permanently and avoid the ~1min
+            # reload-from-disk delay on the first message after idling.
             - name: OLLAMA_KEEP_ALIVE
-              value: "10m"
+              value: "-1"
           volumeMounts:
             - name: models
               mountPath: /root/.ollama
