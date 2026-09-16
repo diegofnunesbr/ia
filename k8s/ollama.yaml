@@ -59,10 +59,14 @@ spec:
           resources:
             requests:
               cpu: "2"
-              memory: 10Gi
+              # qwen2.5:7b-instruct needs ~5-6Gi, not the ~10Gi the 14B
+              # variant did - lower request leaves headroom on this 16GB
+              # VM and avoids the "Insufficient memory" scheduling issue
+              # we hit before during rollouts.
+              memory: 6Gi
             limits:
               cpu: "6"
-              memory: 16Gi
+              memory: 10Gi
           readinessProbe:
             tcpSocket:
               port: 11434

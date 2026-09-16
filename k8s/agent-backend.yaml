@@ -23,7 +23,7 @@ spec:
             - name: OWNER_NAME
               value: "Seu Nome" # troque pelo seu nome/apelido
             - name: AGENT_MODEL
-              value: qwen2.5:14b-instruct
+              value: qwen2.5:7b-instruct
             - name: OLLAMA_URL
               value: http://ollama:11434
             - name: WHATSAPP_BRIDGE_URL
