@@ -52,20 +52,18 @@ Fato pessoal duradouro (família, preferências) -> use remember_fact.
 "[Memória relevante: ...]" no início da mensagem = fatos já salvos, use sem
 repetir o trecho.
 search_notes busca no OneNote pessoal de ${OWNER_NAME} (sincronizado a cada
-algumas horas, pode estar desatualizado).`
+algumas horas, pode estar desatualizado).
+"[Data/hora atual: ...]" no início da mensagem = data/hora real agora, sempre
+confie nela e nunca chute uma diferente.`
 
 const TIMEZONE = process.env.TIMEZONE || 'America/Sao_Paulo'
 
-// Built fresh per request (not a static constant) so the model always
-// knows "now" without needing a tool call - avoids a slow, useless
-// generation cycle for something this trivial.
-function buildSystemPrompt() {
-  const now = new Intl.DateTimeFormat('pt-BR', {
+function currentDateTime() {
+  return new Intl.DateTimeFormat('pt-BR', {
     timeZone: TIMEZONE,
     dateStyle: 'full',
     timeStyle: 'short',
   }).format(new Date())
-  return `${SYSTEM_PROMPT}\n\nData/hora real agora (use exatamente isso, nunca chute): ${now}.`
 }
 
 const TOOLS = [
@@ -333,7 +331,7 @@ app.post('/message', async (req, res) => {
   await ensureSession(from)
   await setTitleIfEmpty(from, titleFrom(text))
 
-  let userContent = text
+  let userContent = `[Data/hora atual: ${currentDateTime()}]\n\n${text}`
 
   const pendingDoc = pendingDocuments.get(from)
   if (pendingDoc) {
@@ -365,7 +363,7 @@ app.post('/message', async (req, res) => {
     for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
       const recent = await getRecentMessages(from, MAX_HISTORY_MESSAGES)
       const message = await chat(
-        [{ role: 'system', content: buildSystemPrompt() }, ...recent],
+        [{ role: 'system', content: SYSTEM_PROMPT }, ...recent],
         TOOLS,
         controller.signal
       )
