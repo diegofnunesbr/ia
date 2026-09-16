@@ -120,10 +120,21 @@ function speak(text) {
   speechSynthesis.speak(utterance)
 }
 
+function addTypingIndicator() {
+  const el = document.createElement('div')
+  el.className = 'msg assistant typing'
+  el.textContent = 'Pensando...'
+  messagesEl.appendChild(el)
+  messagesEl.scrollTop = messagesEl.scrollHeight
+  return el
+}
+
 async function sendMessage(text) {
   if (!text.trim()) return
   addMessage('user', text)
   input.value = ''
+
+  const typingEl = addTypingIndicator()
 
   try {
     const res = await fetch('/api/message', {
@@ -133,9 +144,11 @@ async function sendMessage(text) {
     })
     const data = await res.json()
     const reply = data.reply || 'Desculpa, não consegui responder agora.'
+    typingEl.remove()
     addMessage('assistant', reply, data.downloadUrl)
     speak(reply)
   } catch (err) {
+    typingEl.remove()
     addMessage('assistant', 'Erro ao falar com o assistente.')
     console.error(err)
   } finally {

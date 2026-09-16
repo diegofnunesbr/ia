@@ -129,6 +129,17 @@ body {
   color: white;
 }
 
+.msg.typing {
+  color: #8a8f9c;
+  font-style: italic;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
 .msg.assistant {
   align-self: flex-start;
   background: #1f232b;
