@@ -17,6 +17,13 @@ metadata:
   namespace: personal-ai
 spec:
   replicas: 1
+  # Default RollingUpdate tries to bring the new pod up before tearing
+  # down the old one - with only one replica and requests this large
+  # (10Gi RAM), the node doesn't have room for both at once and the
+  # rollout gets stuck Pending forever ("Insufficient memory"), silently
+  # leaving the old pod running. Recreate kills the old one first.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: ollama
