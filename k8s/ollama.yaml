@@ -58,15 +58,14 @@ spec:
               mountPath: /root/.ollama
           resources:
             requests:
-              cpu: "2"
-              # qwen2.5:7b-instruct needs ~5-6Gi, not the ~10Gi the 14B
-              # variant did - lower request leaves headroom on this 16GB
-              # VM and avoids the "Insufficient memory" scheduling issue
-              # we hit before during rollouts.
-              memory: 6Gi
+              cpu: "1"
+              # qwen2.5:3b-instruct needs ~2-3Gi, not the ~6Gi the 7B
+              # variant did - lower request fits the smaller VM and
+              # leaves room for the other pods sharing the node.
+              memory: 2Gi
             limits:
-              cpu: "7"
-              memory: 10Gi
+              cpu: "2"
+              memory: 4Gi
           readinessProbe:
             tcpSocket:
               port: 11434
