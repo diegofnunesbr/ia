@@ -20,9 +20,17 @@ export async function chat(messages, tools, signal) {
       messages,
       tools,
       stream: true,
-      // Caps worst-case latency - an unbounded response can ramble on for
-      // a long time on CPU. 400 tokens is plenty for a chat answer.
-      options: { num_predict: 400 },
+      options: {
+        // Caps worst-case latency - an unbounded response can ramble on
+        // for a long time on CPU. 400 tokens is plenty for a chat answer.
+        num_predict: 400,
+        // Ollama's default (2048) is too small for our system prompt +
+        // tool schemas alone, before any conversation history - going
+        // over it forces an expensive context shift (or a runner
+        // restart) mid-request instead of just prefilling once. The KV
+        // cache cost of a bigger window is trivial (a few hundred MB).
+        num_ctx: 8192,
+      },
     }),
     signal,
   })
