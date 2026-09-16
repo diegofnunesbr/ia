@@ -25,6 +25,12 @@ data:
       cookies:
         - domain: 'home.lan'
           authelia_url: 'https://auth.home.lan'
+          # Home LAN, single user - no need to re-auth constantly.
+          # expiration/inactivity control the plain session; remember_me
+          # is the separate, much longer "lembrar-me" checkbox on login.
+          expiration: '12h'
+          inactivity: '1h'
+          remember_me: '30d'
 
     storage:
       local:
