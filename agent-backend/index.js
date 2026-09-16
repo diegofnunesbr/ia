@@ -243,6 +243,27 @@ setInterval(() => {
 // to the session's next chat message (consumed once, then cleared).
 const pendingDocuments = new Map() // from -> { text, filename }
 
+// Some Qwen builds under Ollama write the tool call as literal text in
+// the message content ("<tool_call>{...}</tool_call>") instead of the
+// structured tool_calls field we ask for - this recovers it so the call
+// still actually runs instead of being shown to the user as raw text.
+function extractFallbackToolCalls(content) {
+  if (!content) return null
+  const matches = [...content.matchAll(/<tool_call>\s*([\s\S]*?)\s*<\/tool_call>/g)]
+  if (!matches.length) return null
+
+  const calls = []
+  for (const m of matches) {
+    try {
+      const parsed = JSON.parse(m[1])
+      if (parsed.name) calls.push({ function: { name: parsed.name, arguments: parsed.arguments || {} } })
+    } catch {
+      // malformed block - skip it, not worth failing the whole message over
+    }
+  }
+  return calls.length ? calls : null
+}
+
 async function runTool(name, args) {
   if (name === 'list_whatsapp_groups') {
     try {
@@ -407,6 +428,14 @@ app.post('/message', async (req, res) => {
         TOOLS,
         controller.signal
       )
+
+      if (!message.tool_calls?.length) {
+        const fallback = extractFallbackToolCalls(message.content)
+        if (fallback) {
+          message.tool_calls = fallback
+          message.content = ''
+        }
+      }
 
       if (!message.tool_calls?.length) {
         await appendMessage(from, { role: 'assistant', content: message.content })
