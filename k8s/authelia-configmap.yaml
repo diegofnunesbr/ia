@@ -18,18 +18,18 @@ data:
     access_control:
       default_policy: deny
       rules:
-        - domain: 'assistente.home.lan'
+        - domain: 'ia.home'
           policy: two_factor
 
     session:
       cookies:
-        - domain: 'home.lan'
+        - domain: 'home'
           # Must match the actual URL used in the browser, port included -
           # this bare-metal ingress-nginx setup is NodePort, not standard
           # 443. A mismatched port here makes Authelia treat the post-login
           # redirect target as unsafe, so it shows the plain "Autenticado"
           # page instead of auto-redirecting back to rd.
-          authelia_url: 'https://auth.home.lan:30277'
+          authelia_url: 'https://auth.home:30277'
           # Home LAN, single user - no need to re-auth constantly.
           # expiration/inactivity control the plain session; remember_me
           # is the separate, much longer "lembrar-me" checkbox on login.
@@ -46,4 +46,4 @@ data:
         filename: /data/notification.txt
 
     totp:
-      issuer: 'assistente.home.lan'
+      issuer: 'ia.home'
