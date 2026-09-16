@@ -9,7 +9,7 @@ RUN apk add --no-cache git
 COPY package.json ./
 RUN npm install --omit=dev
 
-COPY index.js ./
+COPY index.js pdf.js ./
 
 RUN mkdir -p /data/auth
 VOLUME ["/data/auth"]

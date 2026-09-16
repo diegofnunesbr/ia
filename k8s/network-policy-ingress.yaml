@@ -67,24 +67,6 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: image-to-pdf-ingress
-  namespace: personal-ai
-spec:
-  podSelector:
-    matchLabels:
-      app: image-to-pdf
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: whatsapp-bridge
-
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
   name: whatsapp-bridge-ingress
   namespace: personal-ai
 spec:

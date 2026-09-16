@@ -6,6 +6,7 @@ import makeWASocket, {
   DisconnectReason,
   downloadMediaMessage,
 } from '@whiskeysockets/baileys'
+import { imagesToPdf } from './pdf.js'
 
 const AUTH_DIR = process.env.AUTH_DIR || '/data/auth'
 const AGENT_URL = process.env.AGENT_URL || 'http://agent-backend:3000/message'
@@ -16,7 +17,6 @@ const PORT = process.env.PORT || 3001
 // PDF and send it back instantly, without going through the LLM.
 const PDF_GROUP_ID = process.env.PDF_GROUP_ID // e.g. "1203630xxxxxxxxx@g.us"
 const PDF_TRIGGER_WORD = (process.env.PDF_TRIGGER_WORD || 'pdf').toLowerCase()
-const IMAGE_TO_PDF_URL = process.env.IMAGE_TO_PDF_URL || 'http://image-to-pdf:8000/convert'
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' })
 
@@ -176,20 +176,9 @@ async function handleImageToPdf(msg, jid) {
 
   try {
     const buffer = await downloadMediaMessage(msg, 'buffer', {})
-
-    const form = new FormData()
-    form.append(
-      'files',
-      new Blob([buffer], { type: imageMessage.mimetype || 'image/jpeg' }),
-      'imagem.jpg'
-    )
-    form.append('page_size', 'Original')
-    form.append('margin', '0')
-    form.append('quality', 'high')
-
-    const res = await fetch(IMAGE_TO_PDF_URL, { method: 'POST', body: form })
-    if (!res.ok) throw new Error(`image-to-pdf returned ${res.status}`)
-    const pdfBuffer = Buffer.from(await res.arrayBuffer())
+    const pdfBuffer = await imagesToPdf([
+      { buffer, mimetype: imageMessage.mimetype || 'image/jpeg' },
+    ])
 
     await sock.sendMessage(
       jid,
@@ -310,19 +299,13 @@ app.post('/groups/:jid/convert-images', async (req, res) => {
   }
 
   try {
-    const form = new FormData()
-    for (const [i, entry] of cached.entries()) {
+    const images = []
+    for (const entry of cached) {
       const buffer = await downloadMediaMessage(entry.msg, 'buffer', {})
       const mimetype = entry.msg.message?.imageMessage?.mimetype || 'image/jpeg'
-      form.append('files', new Blob([buffer], { type: mimetype }), `imagem-${i + 1}.jpg`)
+      images.push({ buffer, mimetype })
     }
-    form.append('page_size', 'Original')
-    form.append('margin', '0')
-    form.append('quality', 'high')
-
-    const convertRes = await fetch(IMAGE_TO_PDF_URL, { method: 'POST', body: form })
-    if (!convertRes.ok) throw new Error(`image-to-pdf returned ${convertRes.status}`)
-    const pdfBuffer = Buffer.from(await convertRes.arrayBuffer())
+    const pdfBuffer = await imagesToPdf(images)
 
     res.setHeader('content-type', 'application/pdf')
     res.send(pdfBuffer)

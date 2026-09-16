@@ -43,9 +43,10 @@ seção Secrets) pelo que preferir.
   Contatos e mensagens só existem em cache de quando o bridge está
   rodando (imagens: até 50/grupo por 24h) - não dá pra buscar
   histórico de antes do bridge existir, nem contatos que nunca
-  mandaram mensagem enquanto ele estava no ar.
-- `image-to-pdf`: o conversor que você já tinha em
-  `Pessoal/image-to-pdf/`, reaproveitado aqui como serviço interno.
+  mandaram mensagem enquanto ele estava no ar. A conversão de imagem
+  em PDF (legenda "pdf" no grupo, ou pedido em linguagem natural) é
+  feita direto no próprio `whatsapp-bridge` (`pdf-lib`), sem depender
+  de nenhum serviço externo.
 - `onenote-sync`: CronJob (a cada 6h) que sincroniza as páginas do seu
   OneNote pessoal (Microsoft Graph API) para o Postgres, com
   embeddings - o assistente consulta isso via search_notes.
@@ -77,7 +78,6 @@ para a internet. Por isso o isolamento é por camada de confiança, não
 docker build -t personal-ai/agent-backend:latest agent-backend/
 docker build -t personal-ai/web-frontend:latest web-frontend/
 docker build -t personal-ai/whatsapp-bridge:latest whatsapp-bridge/
-docker build -t personal-ai/image-to-pdf:latest ../image-to-pdf/
 ```
 
 Carregue as imagens no seu cluster (import direto se for k3s/k0s, ou
@@ -157,7 +157,6 @@ kubectl apply -f k8s/authelia-configmap.yaml
 kubectl apply -f k8s/authelia.yaml
 kubectl apply -f k8s/agent-backend.yaml
 kubectl apply -f k8s/web-frontend.yaml
-kubectl apply -f k8s/image-to-pdf.yaml
 kubectl apply -f k8s/whatsapp-bridge.yaml
 kubectl apply -f k8s/onenote-sync.yaml
 ```

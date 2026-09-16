@@ -41,8 +41,6 @@ spec:
                 secretKeyRef:
                   name: whatsapp-bridge-secrets
                   key: allowed-number
-            - name: IMAGE_TO_PDF_URL
-              value: http://image-to-pdf:8000/convert
             - name: PDF_GROUP_ID
               valueFrom:
                 secretKeyRef:
