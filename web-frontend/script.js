@@ -1,6 +1,7 @@
 const messagesEl = document.getElementById('messages')
 const form = document.getElementById('form')
 const input = document.getElementById('input')
+const sendBtn = document.getElementById('sendBtn')
 const micBtn = document.getElementById('mic')
 const attachBtn = document.getElementById('attach')
 const fileInput = document.getElementById('fileInput')
@@ -137,26 +138,26 @@ function speak(text) {
   speechSynthesis.speak(utterance)
 }
 
-function addTypingIndicator(onCancel) {
+function addTypingIndicator() {
   const el = document.createElement('div')
   el.className = 'msg assistant typing'
-
-  const label = document.createElement('span')
-  label.textContent = 'Pensando...'
-  el.appendChild(label)
-
-  const cancelBtn = document.createElement('button')
-  cancelBtn.textContent = 'Cancelar'
-  cancelBtn.className = 'cancel-btn'
-  cancelBtn.addEventListener('click', onCancel)
-  el.appendChild(cancelBtn)
-
+  el.textContent = 'Pensando...'
   messagesEl.appendChild(el)
   messagesEl.scrollTop = messagesEl.scrollHeight
   return el
 }
 
 let waitingForReply = false
+let activeController = null
+
+// While waiting for a reply, the send button becomes a stop button in the
+// same spot - same pattern as ChatGPT's stop-generating button.
+function setWaiting(waiting) {
+  waitingForReply = waiting
+  input.disabled = waiting
+  sendBtn.textContent = waiting ? 'Parar' : 'Enviar'
+  sendBtn.classList.toggle('stop', waiting)
+}
 
 async function sendMessage(text) {
   if (!text.trim()) return
@@ -165,13 +166,13 @@ async function sendMessage(text) {
   // and makes both take longer, with no feedback why.
   if (waitingForReply) return
 
-  waitingForReply = true
-  input.disabled = true
+  setWaiting(true)
   addMessage('user', text)
   input.value = ''
 
   const controller = new AbortController()
-  const typingEl = addTypingIndicator(() => controller.abort())
+  activeController = controller
+  const typingEl = addTypingIndicator()
 
   try {
     const res = await fetch('/api/message', {
@@ -194,8 +195,8 @@ async function sendMessage(text) {
       console.error(err)
     }
   } finally {
-    waitingForReply = false
-    input.disabled = false
+    activeController = null
+    setWaiting(false)
     input.focus()
     renderSessionList()
   }
@@ -203,6 +204,10 @@ async function sendMessage(text) {
 
 form.addEventListener('submit', (e) => {
   e.preventDefault()
+  if (waitingForReply) {
+    activeController?.abort()
+    return
+  }
   sendMessage(input.value)
 })
 

@@ -130,30 +130,9 @@ body {
 }
 
 .msg.typing {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   color: #8a8f9c;
-}
-
-.msg.typing span {
   font-style: italic;
   animation: pulse 1.4s ease-in-out infinite;
-}
-
-.msg.typing .cancel-btn {
-  padding: 3px 10px;
-  border-radius: 6px;
-  border: 1px solid #3a3f4b;
-  background: transparent;
-  color: #c7c9d1;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.msg.typing .cancel-btn:hover {
-  border-color: #e0393e;
-  color: #e0393e;
 }
 
 @keyframes pulse {
@@ -192,6 +171,10 @@ body {
   background: #2f6feb;
   color: white;
   cursor: pointer;
+}
+
+#sendBtn.stop {
+  background: #e0393e;
 }
 
 #mic.recording {
