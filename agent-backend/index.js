@@ -120,13 +120,14 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'send_whatsapp_message',
-      description: 'Manda uma mensagem de texto para um contato do WhatsApp.',
+      description: 'Manda uma mensagem de texto para um contato ou grupo do WhatsApp.',
       parameters: {
         type: 'object',
         properties: {
           contact: {
             type: 'string',
-            description: 'Nome do contato (ex.: "Fulano") ou número de telefone com DDI/DDD.',
+            description:
+              'Nome do contato (ex.: "Fulano"), nome do grupo (ex.: "Pessoal"), ou número de telefone com DDI/DDD.',
           },
           text: { type: 'string', description: 'Texto da mensagem a enviar.' },
         },
@@ -295,9 +296,10 @@ async function runTool(name, args) {
     if (!args.contact || !args.text) return { error: 'contact e text são obrigatórios' }
     try {
       const contact = await whatsapp.resolveContact(args.contact)
-      if (!contact) return { error: `contato "${args.contact}" não encontrado` }
-      await whatsapp.sendText(contact.jid, args.text)
-      return { ok: true, sentTo: contact.name || args.contact }
+      const target = contact || (await whatsapp.resolveGroup(args.contact))
+      if (!target) return { error: `contato ou grupo "${args.contact}" não encontrado` }
+      await whatsapp.sendText(target.jid, args.text)
+      return { ok: true, sentTo: target.name || args.contact }
     } catch (err) {
       return { error: `falha ao enviar mensagem: ${err.message}` }
     }
