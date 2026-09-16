@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: whatsapp-auth
-  namespace: personal-ai
+  namespace: ia
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:
@@ -14,7 +14,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: whatsapp-bridge
-  namespace: personal-ai
+  namespace: ia
   labels:
     app: whatsapp-bridge
 spec:
@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
         - name: whatsapp-bridge
-          image: personal-ai/whatsapp-bridge:latest
+          image: ia/whatsapp-bridge:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3001
@@ -70,7 +70,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: whatsapp-bridge
-  namespace: personal-ai
+  namespace: ia
 spec:
   selector:
     app: whatsapp-bridge

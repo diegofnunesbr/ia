@@ -5,7 +5,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: agent-backend-ingress
-  namespace: personal-ai
+  namespace: ia
 spec:
   podSelector:
     matchLabels:
@@ -26,7 +26,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: ollama-ingress
-  namespace: personal-ai
+  namespace: ia
 spec:
   podSelector:
     matchLabels:
@@ -47,7 +47,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: postgres-ingress
-  namespace: personal-ai
+  namespace: ia
 spec:
   podSelector:
     matchLabels:
@@ -68,7 +68,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: whatsapp-bridge-ingress
-  namespace: personal-ai
+  namespace: ia
 spec:
   podSelector:
     matchLabels:
@@ -89,7 +89,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: web-frontend-ingress
-  namespace: personal-ai
+  namespace: ia
 spec:
   podSelector:
     matchLabels:
@@ -107,7 +107,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: authelia-ingress
-  namespace: personal-ai
+  namespace: ia
 spec:
   podSelector:
     matchLabels:

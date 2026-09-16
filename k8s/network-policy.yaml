@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: deny-external-egress
-  namespace: personal-ai
+  namespace: ia
 spec:
   # whatsapp-bridge and onenote-sync are excluded on purpose: they need
   # to reach WhatsApp's/Microsoft's own servers to work. Everything that

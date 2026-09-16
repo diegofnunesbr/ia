@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: authelia-config
-  namespace: personal-ai
+  namespace: ia
 data:
   configuration.yml: |
     server:

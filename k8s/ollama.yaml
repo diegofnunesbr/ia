@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: ollama-models
-  namespace: personal-ai
+  namespace: ia
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:
@@ -14,7 +14,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ollama
-  namespace: personal-ai
+  namespace: ia
 spec:
   replicas: 1
   # Default RollingUpdate tries to bring the new pod up before tearing
@@ -77,7 +77,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ollama
-  namespace: personal-ai
+  namespace: ia
 spec:
   selector:
     app: ollama

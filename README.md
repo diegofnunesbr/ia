@@ -1,4 +1,4 @@
-# personal-ai
+# ia
 
 App de chat (texto + voz) acessível na rede interna, 100% local: o
 LLM roda no seu próprio cluster via Ollama, sem nenhuma chamada para a
@@ -75,9 +75,9 @@ para a internet. Por isso o isolamento é por camada de confiança, não
 ## Build das imagens
 
 ```bash
-docker build -t personal-ai/agent-backend:latest agent-backend/
-docker build -t personal-ai/web-frontend:latest web-frontend/
-docker build -t personal-ai/whatsapp-bridge:latest whatsapp-bridge/
+docker build -t ia/agent-backend:latest agent-backend/
+docker build -t ia/web-frontend:latest web-frontend/
+docker build -t ia/whatsapp-bridge:latest whatsapp-bridge/
 ```
 
 Carregue as imagens no seu cluster (import direto se for k3s/k0s, ou
@@ -93,8 +93,8 @@ afetado pela `NetworkPolicy` que trava a rede em tempo de execução.
 Depois do deploy, baixe o modelo dentro do pod do Ollama:
 
 ```bash
-kubectl exec -n personal-ai deploy/ollama -- ollama pull qwen2.5:3b-instruct
-kubectl exec -n personal-ai deploy/ollama -- ollama pull nomic-embed-text
+kubectl exec -n ia deploy/ollama -- ollama pull qwen2.5:3b-instruct
+kubectl exec -n ia deploy/ollama -- ollama pull nomic-embed-text
 ```
 
 Testado em CPU (6-8 cores, sem GPU), sem streaming pro usuário final
@@ -165,7 +165,7 @@ No primeiro deploy do `whatsapp-bridge`, veja os logs para o QR code
 de pareamento (escaneie no WhatsApp > Aparelhos conectados):
 
 ```bash
-kubectl logs -n personal-ai deploy/whatsapp-bridge -f
+kubectl logs -n ia deploy/whatsapp-bridge -f
 ```
 
 ## OneNote pessoal
@@ -198,9 +198,9 @@ kubectl logs -n personal-ai deploy/whatsapp-bridge -f
 4. Build da imagem e primeira sincronização manual, para validar antes
    de esperar pelo cron:
    ```bash
-   docker build -t personal-ai/onenote-sync:latest onenote-sync/
-   kubectl create job -n personal-ai onenote-sync-manual --from=cronjob/onenote-sync
-   kubectl logs -n personal-ai job/onenote-sync-manual -f
+   docker build -t ia/onenote-sync:latest onenote-sync/
+   kubectl create job -n ia onenote-sync-manual --from=cronjob/onenote-sync
+   kubectl logs -n ia job/onenote-sync-manual -f
    ```
 
 Depois disso, a sincronização roda sozinha a cada 6h
@@ -336,7 +336,7 @@ ficou mais enxuto sem perder capacidade:
 uma chance pequena do seu CNI (k0s costuma vir com kube-router)
 bloquear o `readinessProbe`/`livenessProbe` do kubelet junto com o
 resto do tráfego. Depois do deploy, rode `kubectl get pods -n
-personal-ai` - se algum pod ficar preso em "not ready" apesar de
+ia` - se algum pod ficar preso em "not ready" apesar de
 funcionar (veja os logs), o ajuste é adicionar uma exceção para o
 CIDR dos nós na `NetworkPolicy` daquele serviço.
 
@@ -368,7 +368,7 @@ e injeta no contexto do modelo.
   fato normalmente na conversa.
 - Para ver o que já foi salvo:
   ```bash
-  kubectl exec -n personal-ai deploy/postgres -- psql -U assistant -d assistant -c "SELECT content, created_at FROM memories ORDER BY created_at DESC;"
+  kubectl exec -n ia deploy/postgres -- psql -U assistant -d assistant -c "SELECT content, created_at FROM memories ORDER BY created_at DESC;"
   ```
 - Para apagar um fato errado, use `DELETE FROM memories WHERE id = <id>;`
   no mesmo `psql`.
