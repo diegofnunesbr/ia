@@ -59,13 +59,12 @@ spec:
           resources:
             requests:
               cpu: "1"
-              # qwen2.5:3b-instruct needs ~2-3Gi, not the ~6Gi the 7B
-              # variant did - lower request fits the smaller VM and
-              # leaves room for the other pods sharing the node.
-              memory: 2Gi
+              # qwen2.5:7b-instruct needs ~5-6Gi loaded - VM has 16GB
+              # total now, plenty of room for this plus the other pods.
+              memory: 6Gi
             limits:
-              cpu: "3"
-              memory: 4Gi
+              cpu: "4"
+              memory: 10Gi
           readinessProbe:
             tcpSocket:
               port: 11434
