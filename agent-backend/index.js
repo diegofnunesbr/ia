@@ -343,16 +343,43 @@ async function runTool(name, args) {
   return { error: `ferramenta desconhecida: ${name}` }
 }
 
+// Uses streaming (not stream: false) specifically so cancellation works:
+// with a buffered response, Ollama doesn't reliably notice the client
+// gave up mid-generation and keeps burning CPU regardless. Streaming
+// means closing the connection (via `signal`) actually makes Ollama
+// stop generating tokens, freeing the single processing slot
+// (OLLAMA_NUM_PARALLEL=1) right away instead of after it finishes anyway.
 async function callOllama(messages, signal) {
   const res = await fetch(`${OLLAMA_URL}/api/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, stream: false }),
+    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, stream: true }),
     signal,
   })
   if (!res.ok) throw new Error(`ollama returned ${res.status}`)
-  const data = await res.json()
-  return data.message
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  const message = { role: 'assistant', content: '' }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop()
+
+    for (const line of lines) {
+      if (!line.trim()) continue
+      const chunk = JSON.parse(line)
+      if (chunk.message?.content) message.content += chunk.message.content
+      if (chunk.message?.tool_calls) message.tool_calls = chunk.message.tool_calls
+    }
+  }
+
+  return message
 }
 
 const app = express()
