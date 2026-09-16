@@ -1,10 +1,11 @@
 import express from 'express'
 import qrcode from 'qrcode-terminal'
 import pino from 'pino'
-import baileys from '@whiskeysockets/baileys'
-
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage } =
-  baileys
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  downloadMediaMessage,
+} from '@whiskeysockets/baileys'
 
 const AUTH_DIR = process.env.AUTH_DIR || '/data/auth'
 const AGENT_URL = process.env.AGENT_URL || 'http://agent-backend:3000/message'

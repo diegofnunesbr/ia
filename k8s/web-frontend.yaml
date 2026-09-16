@@ -48,10 +48,13 @@ metadata:
   namespace: personal-ai
   annotations:
     nginx.ingress.kubernetes.io/auth-url: "http://authelia.personal-ai.svc.cluster.local/api/verify"
-    nginx.ingress.kubernetes.io/auth-signin: "http://auth.home.lan/?rd=$scheme://$http_host$request_uri"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.home.lan/?rd=$scheme://$http_host$request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "Remote-User,Remote-Groups,Remote-Name,Remote-Email"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts: ["assistente.home.lan"]
+      secretName: personal-ai-tls
   rules:
     - host: assistente.home.lan
       http:

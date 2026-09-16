@@ -25,6 +25,12 @@ spec:
       labels:
         app: authelia
     spec:
+      # Kubernetes injects <SERVICE>_PORT/<SERVICE>_SERVICE_* env vars for
+      # every Service in the namespace by default. Authelia treats any
+      # AUTHELIA_* env var as a config override, so those auto-injected
+      # vars (from the "authelia" Service itself) collide with real
+      # config keys and crash it on startup. Turn that off.
+      enableServiceLinks: false
       containers:
         - name: authelia
           image: authelia/authelia:4.38
@@ -96,6 +102,9 @@ metadata:
   namespace: personal-ai
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts: ["auth.home.lan"]
+      secretName: personal-ai-tls
   rules:
     - host: auth.home.lan
       http:

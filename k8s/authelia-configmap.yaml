@@ -24,7 +24,7 @@ data:
     session:
       cookies:
         - domain: 'home.lan'
-          authelia_url: 'http://auth.home.lan'
+          authelia_url: 'https://auth.home.lan'
 
     storage:
       local:
