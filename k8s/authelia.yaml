@@ -100,16 +100,6 @@ kind: Ingress
 metadata:
   name: authelia
   namespace: personal-ai
-  annotations:
-    # Visiting the bare portal (no path, no query) is what happens when
-    # you type auth.home.lan directly - send it straight to the app
-    # instead of Authelia's own account page. Login/2FA/reset routes and
-    # the ?rd=... redirect flow all have a path or query string, so they
-    # never match this and are untouched.
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      if ($request_uri = "/") {
-        return 302 https://assistente.home.lan:30277/;
-      }
 spec:
   ingressClassName: nginx
   tls:
