@@ -6,6 +6,7 @@ import { initMemory, rememberFact, recallRelevant } from './memory.js'
 import { initNotes, searchNotes } from './notes.js'
 import * as whatsapp from './whatsapp.js'
 import { extractText, imageToPdf } from './documents.js'
+import { webSearch } from './websearch.js'
 import {
   initSessions,
   ensureSession,
@@ -58,6 +59,11 @@ Fato pessoal duradouro (família, preferências) -> use remember_fact.
 repetir o trecho.
 search_notes busca no OneNote pessoal de ${OWNER_NAME} (sincronizado a cada
 algumas horas, pode estar desatualizado).
+web_search busca na internet - use só quando a pergunta precisar de
+informação atual/em tempo real que você não tem (notícia, jogo, cotação,
+etc.), nunca para conhecimento geral que você já sabe. A query da busca deve
+ser só o essencial do que buscar - NUNCA inclua senha, dado sensível ou
+informação pessoal de ${OWNER_NAME} na query.
 "[Data/hora atual: ...]" no início da mensagem = data/hora real agora, sempre
 confie nela e nunca chute uma diferente.`
 
@@ -176,6 +182,24 @@ const TOOLS = [
         type: 'object',
         properties: {
           query: { type: 'string', description: 'O que buscar nas notas.' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'web_search',
+      description:
+        'Busca na internet por informação atual/em tempo real (notícia, jogo, cotação, etc.) que não está no seu conhecimento.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Termos de busca, só o essencial - nunca inclua dados sensíveis.',
+          },
         },
         required: ['query'],
       },
@@ -313,6 +337,17 @@ async function runTool(name, args) {
       return { notes: results.map((n) => ({ title: n.title, excerpt: n.content.slice(0, 800) })) }
     } catch (err) {
       return { error: `falha ao buscar notas: ${err.message}` }
+    }
+  }
+
+  if (name === 'web_search') {
+    if (!args.query) return { error: 'query é obrigatório' }
+    try {
+      const results = await webSearch(args.query)
+      if (!results.length) return { results: [], note: 'nenhum resultado encontrado' }
+      return { results }
+    } catch (err) {
+      return { error: `falha na busca: ${err.message}` }
     }
   }
 

@@ -62,14 +62,16 @@ O WhatsApp é um serviço na nuvem - não existe forma de usá-lo sem sair
 para a internet. Por isso o isolamento é por camada de confiança, não
 "tudo trancado":
 
-- `agent-backend` e `ollama` (onde ficam senhas e dados sensíveis da
-  conversa) continuam sem nenhum egress externo.
-- `whatsapp-bridge` e `onenote-sync` são as únicas exceções - o
-  primeiro precisa falar com os servidores do WhatsApp, o segundo com
-  a Microsoft (Graph API). Nenhum dos dois recebe as senhas que você
-  fala pro assistente - só trocam dados com o Postgres/`agent-backend`
-  internamente (mensagens do WhatsApp e conteúdo do OneNote,
-  respectivamente).
+- `ollama` (onde o modelo processa a conversa) continua sem nenhum
+  egress externo.
+- `whatsapp-bridge` e `onenote-sync` precisam falar com os servidores
+  do WhatsApp e da Microsoft (Graph API), respectivamente. Nenhum dos
+  dois recebe as senhas que você fala pro assistente - só trocam dados
+  com o Postgres/`agent-backend` internamente.
+- `agent-backend` tem uma exceção estreita (só porta 443) para a
+  ferramenta `web_search` (busca na internet) - decisão consciente do
+  usuário, ver `network-policy-agent-backend-egress.yaml` na seção de
+  segurança abaixo para o detalhe do trade-off.
 
 ## Build das imagens
 
@@ -276,6 +278,15 @@ nada saia para a internet.
 
 ## Segurança (hardening antes do deploy)
 
+- **`k8s/network-policy-agent-backend-egress.yaml`**: exceção
+  deliberada e estreita ao bloqueio de internet do
+  `network-policy.yaml` - libera só a porta 443 (HTTPS) saindo do
+  `agent-backend`, exclusivamente para a ferramenta `web_search`
+  (busca via DuckDuckGo). NetworkPolicy padrão não filtra por domínio,
+  só IP/porta, então isso não restringe para *qual* site na internet;
+  o que limita é o system prompt instruindo o modelo a nunca incluir
+  dados sensíveis na query de busca. Opção consciente do usuário -
+  esse serviço não tem mais isolamento total de internet.
 - **`k8s/network-policy-ingress.yaml`**: cada serviço só aceita
   conexão de quem realmente precisa falar com ele (ex.: só
   `agent-backend` pode chamar `ollama`/`postgres`; só `web-frontend` e
