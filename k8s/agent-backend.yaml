@@ -22,6 +22,8 @@ spec:
           env:
             - name: OWNER_NAME
               value: "Seu Nome" # troque pelo seu nome/apelido
+            - name: AI_NAME
+              value: "IA" # nome que a IA usa para si mesma
             - name: AGENT_MODEL
               value: qwen2.5:3b-instruct
             - name: OLLAMA_URL

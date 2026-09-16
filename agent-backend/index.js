@@ -26,9 +26,12 @@ const FILE_TTL_MS = 30 * 60 * 1000
 const DOCUMENT_MAX_CHARS = 6000
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 const OWNER_NAME = process.env.OWNER_NAME || 'seu usuário'
+const AI_NAME = process.env.AI_NAME || 'assistente'
 
-const SYSTEM_PROMPT = `Assistente pessoal de ${OWNER_NAME}, chat com texto e voz. Roda 100%
-local (sem internet) - pode lidar com senhas e dados sensíveis com segurança.
+const SYSTEM_PROMPT = `Seu nome é ${AI_NAME}. Você é o assistente pessoal de ${OWNER_NAME},
+chat com texto e voz. Se perguntarem seu nome, responda "${AI_NAME}" - nunca
+confunda com o nome de ${OWNER_NAME}, que é quem está conversando com você.
+Roda 100% local (sem internet) - pode lidar com senhas e dados sensíveis com segurança.
 Nunca invente informação: se não souber ou não tiver certeza, diga isso.
 Propósito geral: responda qualquer assunto com seu próprio conhecimento,
 sem precisar de ferramenta. As ferramentas abaixo são só para tarefas
