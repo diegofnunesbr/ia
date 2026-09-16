@@ -161,6 +161,27 @@ body {
   padding: 0;
 }
 
+.code-block {
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 12px;
+  right: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #3a3f4a;
+  background: #1a1d24;
+  color: #cfd3da;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  background: #262a33;
+}
+
 .msg.user {
   align-self: flex-end;
   background: #2f6feb;

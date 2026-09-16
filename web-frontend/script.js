@@ -64,10 +64,29 @@ function markdownToHtml(text) {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
 
-  safe = safe.replace(/@@CB@@(\d+)@@CB@@/g, (_, i) => `<pre><code>${codeBlocks[i]}</code></pre>`)
+  safe = safe.replace(
+    /@@CB@@(\d+)@@CB@@/g,
+    (_, i) => `<div class="code-block"><button type="button" class="copy-btn">Copiar</button><pre><code>${codeBlocks[i]}</code></pre></div>`
+  )
 
   return safe
 }
+
+// Event delegation because code blocks are injected via innerHTML, not
+// created with addEventListener attached individually.
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.copy-btn')
+  if (!btn) return
+  const code = btn.parentElement.querySelector('code')
+  try {
+    await navigator.clipboard.writeText(code.textContent)
+    const original = btn.textContent
+    btn.textContent = 'Copiado!'
+    setTimeout(() => { btn.textContent = original }, 1500)
+  } catch (err) {
+    console.error('copy failed', err)
+  }
+})
 
 function addMessage(role, text, downloadUrl) {
   const el = document.createElement('div')
