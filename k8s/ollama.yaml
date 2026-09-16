@@ -58,18 +58,13 @@ spec:
               mountPath: /root/.ollama
           resources:
             requests:
-              # A full CPU core request doesn't fit alongside the other
-              # pods on this 2-core node ("Insufficient cpu" scheduling
-              # failure) - 500m is enough to get scheduled, and the
-              # limit below still lets it burst up to 2 cores when
-              # actually generating.
-              cpu: 500m
+              cpu: "1"
               # qwen2.5:3b-instruct needs ~2-3Gi, not the ~6Gi the 7B
               # variant did - lower request fits the smaller VM and
               # leaves room for the other pods sharing the node.
               memory: 2Gi
             limits:
-              cpu: "2"
+              cpu: "3"
               memory: 4Gi
           readinessProbe:
             tcpSocket:
