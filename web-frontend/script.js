@@ -1,4 +1,5 @@
 const messagesEl = document.getElementById('messages')
+const messagesScrollEl = document.getElementById('messagesScroll')
 const form = document.getElementById('form')
 const input = document.getElementById('input')
 const sendBtn = document.getElementById('sendBtn')
@@ -108,7 +109,7 @@ function addMessage(role, text, downloadUrl) {
     el.appendChild(link)
   }
   messagesEl.appendChild(el)
-  messagesEl.scrollTop = messagesEl.scrollHeight
+  messagesScrollEl.scrollTop = messagesScrollEl.scrollHeight
 }
 
 function resetMessages() {
@@ -199,7 +200,7 @@ function addTypingIndicator() {
   el.className = 'msg assistant typing'
   el.textContent = 'Pensando...'
   messagesEl.appendChild(el)
-  messagesEl.scrollTop = messagesEl.scrollHeight
+  messagesScrollEl.scrollTop = messagesScrollEl.scrollHeight
   return el
 }
 

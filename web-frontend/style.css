@@ -125,15 +125,19 @@ body {
   min-width: 0;
 }
 
-.messages {
+.messages-scroll {
   flex: 1;
   overflow-y: auto;
+}
+
+.messages {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   max-width: 720px;
   width: 100%;
+  min-height: 100%;
   margin: 0 auto;
 }
 
