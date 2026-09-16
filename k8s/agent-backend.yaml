@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-backend
+  namespace: personal-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-backend
+  template:
+    metadata:
+      labels:
+        app: agent-backend
+    spec:
+      containers:
+        - name: agent-backend
+          image: personal-ai/agent-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: OWNER_NAME
+              value: "Seu Nome" # troque pelo seu nome/apelido
+            - name: AGENT_MODEL
+              value: qwen2.5:14b-instruct
+            - name: OLLAMA_URL
+              value: http://ollama:11434
+            - name: WHATSAPP_BRIDGE_URL
+              value: http://whatsapp-bridge:3001
+            - name: PUBLIC_BASE_URL
+              value: /api
+            - name: EMBED_MODEL
+              value: nomic-embed-text
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql://assistant:$(POSTGRES_PASSWORD)@postgres:5432/assistant
+            - name: ALLOWED_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: whatsapp-bridge-secrets
+                  key: allowed-number
+            - name: USER_WHATSAPP_JID
+              value: $(ALLOWED_NUMBER)@s.whatsapp.net
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              # OCR (tesseract.js) is the CPU-heavy path here - the limit
+              # gives it room to burst without starving other pods.
+              cpu: "2"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-backend
+  namespace: personal-ai
+spec:
+  selector:
+    app: agent-backend
+  ports:
+    - port: 3000
+      targetPort: 3000

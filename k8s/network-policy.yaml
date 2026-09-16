@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-external-egress
+  namespace: personal-ai
+spec:
+  # whatsapp-bridge and onenote-sync are excluded on purpose: they need
+  # to reach WhatsApp's/Microsoft's own servers to work. Everything that
+  # touches the LLM or secrets (agent-backend, ollama, authelia) stays
+  # fully locked down.
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: NotIn
+        values: ["whatsapp-bridge", "onenote-sync"]
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Any traffic within the cluster (pod-to-pod, other namespaces if needed)
+    - to:
+        - namespaceSelector: {}

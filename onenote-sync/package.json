@@ -1,0 +1,14 @@
+{
+  "name": "onenote-sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "auth": "node auth.js",
+    "sync": "node sync.js"
+  },
+  "dependencies": {
+    "html-to-text": "^9.0.5",
+    "pg": "^8.13.0"
+  }
+}

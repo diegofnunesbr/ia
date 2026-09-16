@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: personal-ai
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 15Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: personal-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:0.3.14
+          ports:
+            - containerPort: 11434
+          env:
+            # Single user, one request at a time - avoids spawning extra
+            # parallel model contexts that would multiply RAM usage.
+            - name: OLLAMA_NUM_PARALLEL
+              value: "1"
+            # Keep both models (chat + embeddings) resident so switching
+            # between them on every message doesn't force a reload from
+            # disk each time.
+            - name: OLLAMA_MAX_LOADED_MODELS
+              value: "2"
+            # Unload idle models after 10 min so the RAM goes back to the
+            # host (and your other Proxmox VMs) when the assistant isn't
+            # in use. Costs a few seconds to reload on the next message
+            # after being idle - raise this if that delay bothers you.
+            - name: OLLAMA_KEEP_ALIVE
+              value: "10m"
+          volumeMounts:
+            - name: models
+              mountPath: /root/.ollama
+          resources:
+            requests:
+              cpu: "2"
+              memory: 10Gi
+            limits:
+              cpu: "6"
+              memory: 16Gi
+          readinessProbe:
+            tcpSocket:
+              port: 11434
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: ollama-models
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: personal-ai
+spec:
+  selector:
+    app: ollama
+  ports:
+    - port: 11434
+      targetPort: 11434

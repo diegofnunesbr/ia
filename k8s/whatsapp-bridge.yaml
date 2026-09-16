@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: whatsapp-auth
+  namespace: personal-ai
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 256Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whatsapp-bridge
+  namespace: personal-ai
+  labels:
+    app: whatsapp-bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whatsapp-bridge
+  template:
+    metadata:
+      labels:
+        app: whatsapp-bridge
+    spec:
+      containers:
+        - name: whatsapp-bridge
+          image: personal-ai/whatsapp-bridge:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+          env:
+            - name: AGENT_URL
+              value: http://agent-backend:3000/message
+            - name: ALLOWED_NUMBER
+              valueFrom:
+                secretKeyRef:
+                  name: whatsapp-bridge-secrets
+                  key: allowed-number
+            - name: IMAGE_TO_PDF_URL
+              value: http://image-to-pdf:8000/convert
+            - name: PDF_GROUP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: whatsapp-bridge-secrets
+                  key: pdf-group-id
+          volumeMounts:
+            - name: auth
+              mountPath: /data/auth
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+      volumes:
+        - name: auth
+          persistentVolumeClaim:
+            claimName: whatsapp-auth
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whatsapp-bridge
+  namespace: personal-ai
+spec:
+  selector:
+    app: whatsapp-bridge
+  ports:
+    - port: 3001
+      targetPort: 3001

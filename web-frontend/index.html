@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assistente Pessoal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside id="sidebar" class="sidebar">
+      <button id="newChat" class="new-chat-btn">+ Nova conversa</button>
+      <div id="sessionList" class="session-list"></div>
+    </aside>
+    <main class="chat">
+      <button type="button" id="menuToggle" class="menu-toggle" aria-label="Conversas">☰</button>
+      <div id="messages" class="messages"></div>
+      <form id="form" class="composer">
+        <button type="button" id="attach" title="Anexar arquivo" aria-label="Anexar arquivo">📎</button>
+        <input id="fileInput" type="file" accept="image/*,.pdf" hidden />
+        <button type="button" id="mic" title="Falar" aria-label="Falar">🎤</button>
+        <input id="input" type="text" placeholder="Escreva ou fale..." autocomplete="off" />
+        <button type="submit">Enviar</button>
+      </form>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

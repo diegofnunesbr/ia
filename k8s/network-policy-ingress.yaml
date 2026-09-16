@@ -1,0 +1,139 @@
+# Restricts which pods can call each internal service, so Authelia's
+# login isn't the only thing standing between an already-on-the-network
+# attacker and agent-backend/ollama/postgres.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-backend-ingress
+  namespace: personal-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: agent-backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: web-frontend
+        - podSelector:
+            matchLabels:
+              app: whatsapp-bridge
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ollama-ingress
+  namespace: personal-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: ollama
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: agent-backend
+        - podSelector:
+            matchLabels:
+              app: onenote-sync
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-ingress
+  namespace: personal-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: agent-backend
+        - podSelector:
+            matchLabels:
+              app: onenote-sync
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: image-to-pdf-ingress
+  namespace: personal-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: image-to-pdf
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: whatsapp-bridge
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: whatsapp-bridge-ingress
+  namespace: personal-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: whatsapp-bridge
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: agent-backend
+
+---
+# web-frontend and authelia are reached from ingress-nginx (a different
+# namespace), so they need an explicit namespace-based allow instead of
+# a podSelector.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-frontend-ingress
+  namespace: personal-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: web-frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: authelia-ingress
+  namespace: personal-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: authelia
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx

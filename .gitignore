@@ -1,0 +1,6 @@
+node_modules/
+
+# Secrets filled with real values - never commit these. Copy the
+# .example.yaml templates here before editing, per the README.
+k8s/secrets.local.yaml
+*.local.yaml

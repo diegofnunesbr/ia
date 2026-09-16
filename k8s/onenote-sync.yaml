@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onenote-sync
+  namespace: personal-ai
+
+---
+# Only allows reading/updating its own secret (the rotating refresh
+# token) - nothing else in the cluster.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: onenote-sync-secret-editor
+  namespace: personal-ai
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["onenote-sync-secrets"]
+    verbs: ["get", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: onenote-sync-secret-editor
+  namespace: personal-ai
+subjects:
+  - kind: ServiceAccount
+    name: onenote-sync
+roleRef:
+  kind: Role
+  name: onenote-sync-secret-editor
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: onenote-sync
+  namespace: personal-ai
+spec:
+  schedule: "0 */6 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 900
+      template:
+        metadata:
+          labels:
+            app: onenote-sync
+        spec:
+          serviceAccountName: onenote-sync
+          restartPolicy: OnFailure
+          containers:
+            - name: onenote-sync
+              image: personal-ai/onenote-sync:latest
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: NODE_EXTRA_CA_CERTS
+                  value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                - name: OLLAMA_URL
+                  value: http://ollama:11434
+                - name: EMBED_MODEL
+                  value: nomic-embed-text
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secrets
+                      key: password
+                - name: DATABASE_URL
+                  value: postgresql://assistant:$(POSTGRES_PASSWORD)@postgres:5432/assistant
+                - name: ONENOTE_CLIENT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: onenote-sync-secrets
+                      key: client-id
+                - name: ONENOTE_REFRESH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: onenote-sync-secrets
+                      key: refresh-token
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi

@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authelia-config
+  namespace: personal-ai
+data:
+  configuration.yml: |
+    server:
+      address: 'tcp://0.0.0.0:9091'
+
+    log:
+      level: info
+
+    authentication_backend:
+      file:
+        path: /secrets/users_database.yml
+
+    access_control:
+      default_policy: deny
+      rules:
+        - domain: 'assistente.home.lan'
+          policy: two_factor
+
+    session:
+      cookies:
+        - domain: 'home.lan'
+          authelia_url: 'http://auth.home.lan'
+
+    storage:
+      local:
+        path: /data/db.sqlite3
+
+    notifier:
+      filesystem:
+        filename: /data/notification.txt
+
+    totp:
+      issuer: 'assistente.home.lan'
