@@ -113,9 +113,26 @@ async function startNewSession() {
 newChatBtn.addEventListener('click', () => startNewSession())
 menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'))
 
+// Strips markdown so the text-to-speech doesn't read out symbols like
+// "asterisco asterisco" or "crase crase crase python" - the screen keeps
+// the original formatted text, only the spoken version is cleaned up.
+function stripMarkdownForSpeech(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, ' (veja o código na tela) ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/\n{2,}/g, '. ')
+    .trim()
+}
+
 function speak(text) {
   if (!('speechSynthesis' in window)) return
-  const utterance = new SpeechSynthesisUtterance(text)
+  const utterance = new SpeechSynthesisUtterance(stripMarkdownForSpeech(text))
   utterance.lang = 'pt-BR'
   speechSynthesis.speak(utterance)
 }
