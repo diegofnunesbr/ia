@@ -267,8 +267,8 @@ Limitações: PDF escaneado sem camada de texto (só imagem dentro do
 PDF) não é lido ainda; e o OCR está configurado para português
 (`OCR_LANG=por`).
 
-Ajuste `ia.home` e `auth.home` no DNS local (ou `/etc/hosts`) para o
-IP do seu ingress-nginx.
+Ajuste `ia.home` e `auth.ia.home` no DNS local (ou `/etc/hosts`) para
+o IP do seu ingress-nginx.
 
 `k8s/network-policy.yaml` bloqueia todo egress externo do namespace
 (só permite DNS e tráfego entre pods do cluster) - é o que garante que

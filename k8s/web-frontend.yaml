@@ -52,7 +52,7 @@ metadata:
     # baremetal/NodePort install, not the standard 443 - check
     # `kubectl get svc -n ingress-nginx` and update this if it ever
     # changes (e.g. the Service gets recreated without a pinned nodePort).
-    nginx.ingress.kubernetes.io/auth-signin: "https://auth.home:30277/?rd=$scheme://$http_host$request_uri"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.ia.home:30277/?rd=$scheme://$http_host$request_uri"
     nginx.ingress.kubernetes.io/auth-response-headers: "Remote-User,Remote-Groups,Remote-Name,Remote-Email"
     # Same reasoning as web-frontend/nginx.conf: CPU inference can take
     # well past the 60s default before agent-backend replies.

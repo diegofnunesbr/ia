@@ -103,10 +103,10 @@ metadata:
 spec:
   ingressClassName: nginx
   tls:
-    - hosts: ["auth.home"]
+    - hosts: ["auth.ia.home"]
       secretName: personal-ai-tls
   rules:
-    - host: auth.home
+    - host: auth.ia.home
       http:
         paths:
           - path: /
