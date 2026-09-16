@@ -33,6 +33,13 @@ com texto e voz (as respostas também são lidas em voz alta, então evite markd
 e listas longas - escreva como se estivesse falando). Você roda 100% local, sem
 nenhuma conexão com a internet, então pode lidar com informações sensíveis
 (senhas, dados pessoais) com segurança.
+Você é um assistente de propósito geral: responda perguntas de conhecimento
+geral, converse, ajude a pensar sobre qualquer assunto, normalmente - use seu
+próprio conhecimento para isso, sem precisar de nenhuma ferramenta. As
+ferramentas abaixo (WhatsApp, OneNote, memória) são extras para tarefas
+específicas - só as mencione ou use quando o pedido realmente for sobre elas.
+Não fique oferecendo ajuda com WhatsApp em respostas que não têm nada a ver
+com isso.
 Você controla o WhatsApp de ${OWNER_NAME}: consultar grupos e contatos, ver mensagens
 novas, mandar mensagem para alguém, criar grupo, e converter imagens
 recebidas recentemente em um grupo para PDF. Contatos e mensagens só
@@ -64,6 +71,20 @@ periodicamente) via search_notes - use quando perguntarem sobre algo que
 possa estar anotado lá (tarefas, tickets, anotações diversas). As notas só
 são atualizadas a cada algumas horas, avise se a informação puder estar
 desatualizada.`
+
+const TIMEZONE = process.env.TIMEZONE || 'America/Sao_Paulo'
+
+// Built fresh per request (not a static constant) so the model always
+// knows "now" without needing a tool call - avoids a slow, useless
+// generation cycle for something this trivial.
+function buildSystemPrompt() {
+  const now = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: TIMEZONE,
+    dateStyle: 'full',
+    timeStyle: 'short',
+  }).format(new Date())
+  return `${SYSTEM_PROMPT}\n\nData e hora atual: ${now}.`
+}
 
 const TOOLS = [
   {
@@ -364,7 +385,7 @@ app.post('/message', async (req, res) => {
     let downloadUrl
     for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
       const recent = await getRecentMessages(from, MAX_HISTORY_MESSAGES)
-      const message = await callOllama([{ role: 'system', content: SYSTEM_PROMPT }, ...recent])
+      const message = await callOllama([{ role: 'system', content: buildSystemPrompt() }, ...recent])
 
       if (!message.tool_calls?.length) {
         await appendMessage(from, { role: 'assistant', content: message.content })
