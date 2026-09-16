@@ -93,13 +93,24 @@ afetado pela `NetworkPolicy` que trava a rede em tempo de execução.
 Depois do deploy, baixe o modelo dentro do pod do Ollama:
 
 ```bash
-kubectl exec -n personal-ai deploy/ollama -- ollama pull qwen2.5:14b-instruct
+kubectl exec -n personal-ai deploy/ollama -- ollama pull qwen2.5:3b-instruct
 kubectl exec -n personal-ai deploy/ollama -- ollama pull nomic-embed-text
 ```
 
-Em CPU (32GB RAM, sem GPU) espere alguns segundos por resposta. Se
-estiver muito lento, `qwen2.5:7b-instruct` é mais rápido com menos
-qualidade.
+Testado em CPU (6-8 cores, sem GPU), sem streaming pro usuário final
+(a resposta só aparece pronta, não palavra por palavra):
+
+| Modelo | Tempo (pergunta simples, aquecido) |
+|---|---|
+| `qwen2.5:14b-instruct` | ~1min13s |
+| `qwen2.5:7b-instruct` | ~33s |
+| `qwen2.5:3b-instruct` (padrão atual) | ~10-15s |
+
+Mais núcleos de CPU não ajudam muito além de ~6 (o gargalo em CPU
+puro é banda de memória, não contagem de núcleos - só GPU resolve de
+verdade). O 3B é bem mais rápido mas comete mais deslizes de
+português/precisão que o 7B - troque em `k8s/agent-backend.yaml`
+(`AGENT_MODEL`) se preferir mais qualidade em troca de mais demora.
 
 ## Secrets
 
@@ -367,6 +378,6 @@ e injeta no contexto do modelo.
 
 - Lembretes agendados (CronJob) usando o mesmo Postgres.
 - Conectores: Tuya local (tinytuya), câmeras ONVIF, impressoras IPP/CUPS.
-- Trocar `qwen2.5:14b-instruct` por um modelo menor (7B/3B) se o
-  desempenho em CPU incomodar.
+- GPU passthrough no Proxmox, se algum dia comprar uma placa dedicada
+  (ganho de velocidade real, não só 2-3x como trocar de modelo deu).
 - OCR de PDF escaneado (hoje só funciona PDF com camada de texto).
