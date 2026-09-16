@@ -5,8 +5,8 @@
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
-  background: #0f1115;
-  color: #e6e6e6;
+  background: #ffffff;
+  color: #1a1d24;
   height: 100vh;
 }
 
@@ -18,8 +18,8 @@ body {
 .sidebar {
   width: 260px;
   flex-shrink: 0;
-  background: #14161c;
-  border-right: 1px solid #262a33;
+  background: #f5f6f8;
+  border-right: 1px solid #e2e5ea;
   display: flex;
   flex-direction: column;
   padding: 12px;
@@ -32,7 +32,7 @@ body {
   border-radius: 8px;
   border: 1px solid #2f6feb;
   background: transparent;
-  color: #7fb2ff;
+  color: #2f6feb;
   cursor: pointer;
   font-size: 14px;
 }
@@ -48,9 +48,9 @@ body {
 .logout-btn {
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #3a2020;
+  border: 1px solid #e0393e;
   background: transparent;
-  color: #ff8080;
+  color: #e0393e;
   cursor: pointer;
   font-size: 14px;
   text-align: center;
@@ -58,7 +58,7 @@ body {
 }
 
 .logout-btn:hover {
-  background: #2a1616;
+  background: #fbe9e9;
 }
 
 .session-item {
@@ -69,16 +69,16 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
-  color: #c7c9d1;
+  color: #454952;
 }
 
 .session-item:hover {
-  background: #1a1d24;
+  background: #e9ebef;
 }
 
 .session-item.active {
-  background: #1f2b45;
-  color: white;
+  background: #dbe6fb;
+  color: #14161c;
 }
 
 .session-item .title {
@@ -107,7 +107,7 @@ body {
   margin: 8px 0 0 8px;
   background: none;
   border: none;
-  color: #e6e6e6;
+  color: #1a1d24;
   font-size: 20px;
   cursor: pointer;
 }
@@ -141,7 +141,7 @@ body {
 }
 
 .msg code {
-  background: #0000003a;
+  background: #0000000f;
   padding: 1px 5px;
   border-radius: 4px;
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
@@ -149,7 +149,7 @@ body {
 }
 
 .msg pre {
-  background: #00000055;
+  background: #0000001a;
   padding: 10px 12px;
   border-radius: 8px;
   overflow-x: auto;
@@ -171,15 +171,15 @@ body {
   right: 8px;
   padding: 3px 8px;
   border-radius: 6px;
-  border: 1px solid #3a3f4a;
-  background: #1a1d24;
-  color: #cfd3da;
+  border: 1px solid #d5d9e0;
+  background: #ffffff;
+  color: #454952;
   font-size: 12px;
   cursor: pointer;
 }
 
 .copy-btn:hover {
-  background: #262a33;
+  background: #eef0f3;
 }
 
 .msg.user {
@@ -201,14 +201,15 @@ body {
 
 .msg.assistant {
   align-self: flex-start;
-  background: #1f232b;
+  background: #f0f1f4;
+  color: #1a1d24;
 }
 
 .composer {
   display: flex;
   gap: 8px;
   padding: 12px;
-  border-top: 1px solid #262a33;
+  border-top: 1px solid #e2e5ea;
   max-width: 720px;
   width: 100%;
   margin: 0 auto;
@@ -218,9 +219,9 @@ body {
   flex: 1;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #262a33;
-  background: #1a1d24;
-  color: #e6e6e6;
+  border: 1px solid #d5d9e0;
+  background: #ffffff;
+  color: #1a1d24;
 }
 
 .composer button {
