@@ -6,7 +6,6 @@ import { initMemory, rememberFact, recallRelevant } from './memory.js'
 import { initNotes, searchNotes } from './notes.js'
 import * as whatsapp from './whatsapp.js'
 import { extractText, imageToPdf } from './documents.js'
-import { webSearch } from './websearch.js'
 import {
   initSessions,
   ensureSession,
@@ -59,11 +58,6 @@ Fato pessoal duradouro (família, preferências) -> use remember_fact.
 repetir o trecho.
 search_notes busca no OneNote pessoal de ${OWNER_NAME} (sincronizado a cada
 algumas horas, pode estar desatualizado).
-web_search busca na internet - use só quando a pergunta precisar de
-informação atual/em tempo real que você não tem (notícia, jogo, cotação,
-etc.), nunca para conhecimento geral que você já sabe. A query da busca deve
-ser só o essencial do que buscar - NUNCA inclua senha, dado sensível ou
-informação pessoal de ${OWNER_NAME} na query.
 "[Data/hora atual: ...]" no início da mensagem = data/hora real agora, sempre
 confie nela e nunca chute uma diferente.`
 
@@ -190,24 +184,6 @@ const TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'web_search',
-      description:
-        'Busca na internet por informação atual/em tempo real (notícia, jogo, cotação, etc.) que não está no seu conhecimento.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'Termos de busca, só o essencial - nunca inclua dados sensíveis.',
-          },
-        },
-        required: ['query'],
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
       name: 'remember_fact',
       description: `Salva permanentemente um fato pessoal, preferência ou informação relevante sobre ${OWNER_NAME}, para lembrar em conversas futuras.`,
       parameters: {
@@ -242,45 +218,6 @@ setInterval(() => {
 // Text extracted from an uploaded document/image, waiting to be attached
 // to the session's next chat message (consumed once, then cleared).
 const pendingDocuments = new Map() // from -> { text, filename }
-
-// Some Qwen builds under Ollama write the tool call as literal text in
-// the message content ("<tool_call>{...}</tool_call>") instead of the
-// structured tool_calls field we ask for - this recovers it so the call
-// still actually runs instead of being shown to the user as raw text.
-const KNOWN_TOOL_NAMES = new Set(TOOLS.map((t) => t.function.name))
-
-// Finds every balanced {...} object in the text (not a regex - a naive
-// non-greedy regex breaks on nested braces like `"arguments": {...}`).
-function extractJsonObjects(text) {
-  const objects = []
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] !== '{') continue
-    let depth = 0
-    for (let j = i; j < text.length; j++) {
-      if (text[j] === '{') depth++
-      else if (text[j] === '}') {
-        depth--
-        if (depth === 0) {
-          try {
-            objects.push(JSON.parse(text.slice(i, j + 1)))
-          } catch {
-            // not valid JSON after all - ignore
-          }
-          break
-        }
-      }
-    }
-  }
-  return objects
-}
-
-function extractFallbackToolCalls(content) {
-  if (!content) return null
-  const calls = extractJsonObjects(content)
-    .filter((obj) => KNOWN_TOOL_NAMES.has(obj.name))
-    .map((obj) => ({ function: { name: obj.name, arguments: obj.arguments || {} } }))
-  return calls.length ? calls : null
-}
 
 async function runTool(name, args) {
   if (name === 'list_whatsapp_groups') {
@@ -379,17 +316,6 @@ async function runTool(name, args) {
     }
   }
 
-  if (name === 'web_search') {
-    if (!args.query) return { error: 'query é obrigatório' }
-    try {
-      const results = await webSearch(args.query)
-      if (!results.length) return { results: [], note: 'nenhum resultado encontrado' }
-      return { results }
-    } catch (err) {
-      return { error: `falha na busca: ${err.message}` }
-    }
-  }
-
   if (name === 'remember_fact') {
     if (!args.fact) return { error: 'fact é obrigatório' }
     await rememberFact(args.fact)
@@ -446,14 +372,6 @@ app.post('/message', async (req, res) => {
         TOOLS,
         controller.signal
       )
-
-      if (!message.tool_calls?.length) {
-        const fallback = extractFallbackToolCalls(message.content)
-        if (fallback) {
-          message.tool_calls = fallback
-          message.content = ''
-        }
-      }
 
       if (!message.tool_calls?.length) {
         await appendMessage(from, { role: 'assistant', content: message.content })
