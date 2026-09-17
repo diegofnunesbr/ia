@@ -62,7 +62,10 @@ spec:
               # total now, plenty of room for this plus the other pods.
               memory: 6Gi
             limits:
-              cpu: "4"
+              # VM going to 8 cores - lets prefill (processing large,
+              # never-cached tool results) actually use the extra
+              # cores, even though pure decode won't benefit past ~6.
+              cpu: "7"
               memory: 10Gi
           readinessProbe:
             tcpSocket:
