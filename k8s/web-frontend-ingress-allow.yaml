@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-frontend-allow-all-ingress
+  namespace: ia
+spec:
+  # kube-router (this cluster's CNI) doesn't seem to default to "allow
+  # all ingress" for a pod with no ingress-type NetworkPolicy selecting
+  # it, unlike the Kubernetes spec - web-frontend is still matched by
+  # deny-external-egress's podSelector (egress-only, but enough to make
+  # kube-router start dropping its ingress too). Confirmed via tcpdump:
+  # SYN packets reached the node's NIC but got silently dropped with no
+  # SYN-ACK/RST - not a network/firewall issue outside the VM. This
+  # explicit allow-all restores normal ingress to the app's entry point.
+  podSelector:
+    matchLabels:
+      app: web-frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - {}

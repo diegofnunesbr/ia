@@ -152,6 +152,7 @@ kubectl apply -f k8s/postgres.yaml
 kubectl apply -f k8s/ollama.yaml
 kubectl apply -f k8s/agent-backend.yaml
 kubectl apply -f k8s/web-frontend.yaml
+kubectl apply -f k8s/web-frontend-ingress-allow.yaml
 kubectl apply -f k8s/whatsapp-bridge.yaml
 kubectl apply -f k8s/onenote-sync.yaml
 ```
