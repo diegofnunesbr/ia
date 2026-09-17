@@ -22,8 +22,12 @@ const menuToggle = document.getElementById('menuToggle')
 const CURRENT_SESSION_KEY = 'assistant-current-session-id'
 let sessionId = localStorage.getItem(CURRENT_SESSION_KEY)
 
+// crypto.randomUUID() only exists in a secure context (https:, or
+// localhost) - this app is served over plain HTTP by design, so it's
+// unavailable here. A session ID just needs to be unique, not
+// cryptographically random.
 function newSessionId() {
-  return 'web-' + crypto.randomUUID()
+  return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)
 }
 
 function setCurrentSession(id) {
