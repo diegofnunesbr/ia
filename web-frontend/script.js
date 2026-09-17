@@ -247,8 +247,17 @@ async function sendMessage(text, viaVoice = false) {
       signal: controller.signal,
     })
     const data = await res.json()
-    const reply = data.reply || 'Desculpa, não consegui responder agora.'
     typingEl.remove()
+    if (!res.ok) {
+      if (res.status === 401) {
+        addMessage('assistant', 'Sessão expirada, faça login de novo.')
+        showLogin()
+        return
+      }
+      addMessage('assistant', data.error || `Erro do servidor (${res.status}).`)
+      return
+    }
+    const reply = data.reply || 'Desculpa, não consegui responder agora.'
     addMessage('assistant', reply, data.downloadUrl)
     if (viaVoice) speak(reply)
   } catch (err) {
