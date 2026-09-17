@@ -49,6 +49,13 @@ export async function setTitleIfEmpty(sessionId, title) {
 // Full transcript for a session, meant for the UI to redraw a conversation
 // when the user switches back to it (only user/assistant turns, skipping
 // internal tool-call bookkeeping).
+// User messages are stored with internal context tags prepended
+// ("[Data/hora atual: ...]", "[Memória relevante: ...]", etc.) so the
+// model sees them on every future read of this history - but the user
+// never typed that part, so strip it back off before showing it to
+// them (matches what they see right after sending, before a reload).
+const LEADING_CONTEXT_TAGS = /^(\[[^\]]*\]\n\n)+/
+
 export async function getConversationForDisplay(sessionId) {
   const { rows } = await pool.query(
     `SELECT role, content FROM chat_messages
@@ -56,7 +63,9 @@ export async function getConversationForDisplay(sessionId) {
      ORDER BY id ASC`,
     [sessionId]
   )
-  return rows
+  return rows.map((r) =>
+    r.role === 'user' ? { ...r, content: r.content.replace(LEADING_CONTEXT_TAGS, '') } : r
+  )
 }
 
 // Recent messages used to build the prompt sent to the model, including
