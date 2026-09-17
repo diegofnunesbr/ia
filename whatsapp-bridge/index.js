@@ -41,13 +41,13 @@ function cacheGroupImage(jid, msg) {
   GROUP_IMAGE_CACHE.set(jid, list.slice(-IMAGE_CACHE_MAX))
 }
 
-// Best-effort contact directory: WhatsApp doesn't hand over your full phone
-// contact list easily through Baileys, so this fills in from whatever the
-// app syncs (contacts.upsert/update) plus the display name of anyone who
-// messages while the bridge is running. Good enough to resolve "fulano" to
-// a JID for people you actually talk to. Persisted to disk (same PVC as
-// the auth state) so a pod restart doesn't throw away every contact
-// learned so far - it used to be in-memory only, wiped on every deploy.
+// Best-effort contact directory, filled in only from the display name of
+// whoever actually messages while the bridge is running - deliberately
+// not from WhatsApp's full synced address book (see the note below).
+// Good enough to resolve "fulano" to a JID for people you actually talk
+// to. Persisted to disk (same PVC as the auth state) so a pod restart
+// doesn't throw away every contact learned so far - it used to be
+// in-memory only, wiped on every deploy.
 const CONTACTS_FILE = path.join(AUTH_DIR, 'contacts.json')
 
 function loadContactCache() {
