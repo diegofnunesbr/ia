@@ -101,12 +101,11 @@ async function startSocket() {
 
   sock.ev.on('creds.update', saveCreds)
 
-  sock.ev.on('contacts.upsert', (contacts) => {
-    for (const c of contacts) cacheContact(c.id, c.name || c.notify)
-  })
-  sock.ev.on('contacts.update', (updates) => {
-    for (const c of updates) cacheContact(c.id, c.name || c.notify)
-  })
+  // Deliberately NOT using contacts.upsert/contacts.update here - those
+  // fire for WhatsApp's full synced address book (anyone saved on the
+  // phone, including people/businesses never actually messaged through
+  // this bridge), which is noise for "who have I actually talked to".
+  // cacheContact() below (on real incoming messages) is the only source.
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update
