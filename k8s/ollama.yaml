@@ -58,10 +58,9 @@ spec:
           resources:
             requests:
               cpu: "1"
-              # qwen2.5:7b-instruct needs ~5-6Gi loaded - 8Gi requested
-              # for extra margin (owner's preference), still well under
-              # the 9Gi limit and the VM's 12GB total.
-              memory: 8Gi
+              # qwen2.5:7b-instruct needs ~5-6Gi loaded - 7Gi requested
+              # for margin (owner's preference), under the 10Gi limit.
+              memory: 7Gi
             limits:
               # VM is dedicated to this project (owner's call) and going
               # to 8 cores - lets prefill (processing large, never-cached
@@ -69,10 +68,9 @@ spec:
               # won't benefit past ~6. A limit isn't a reservation, so
               # this doesn't starve the other pods' small CPU requests.
               cpu: "8"
-              # VM has 12GB total now (down from 16GB) - 9Gi keeps ~3GB
-              # of margin above the real ~7GB need (weights + KV cache
-              # at num_ctx=16384) for the OS, kubelet, and other pods.
-              memory: 9Gi
+              # VM has 12GB total, dedicated to this project alone - 10Gi
+              # leaves ~2GB for the OS/kubelet/other pods (owner's call).
+              memory: 10Gi
           readinessProbe:
             tcpSocket:
               port: 11434
