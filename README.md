@@ -3,9 +3,11 @@
 App de chat (texto + voz) acessível na rede interna, 100% local: o
 LLM roda no seu próprio cluster via Ollama, sem nenhuma chamada para a
 internet - por isso é seguro colocar senhas/dados sensíveis na
-conversa. Login + 2FA (senha + código TOTP) são feitos direto no
-`agent-backend` (ver `agent-backend/auth.js`) - acessível só por IP,
-sem precisar de domínio. Já tem tool-calling ligado ao WhatsApp
+conversa. Login (usuário + senha) é feito direto no `agent-backend`
+(ver `agent-backend/auth.js`) - acessível via HTTP puro por IP, sem
+precisar de domínio nem certificado (2FA pode ser adicionado depois,
+deixado de fora por enquanto pra manter simples). Já tem tool-calling
+ligado ao WhatsApp
 (grupos, contatos, mensagens novas, enviar mensagem, criar grupo,
 converter imagens em PDF), upload de documento/imagem com OCR local, e
 notificação proativa via WhatsApp; smart home, câmeras e impressoras
@@ -124,17 +126,12 @@ coberto pelo `.gitignore`) e edite essa cópia:
 cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 ```
 
-1. Gere o hash da sua senha de login e o segredo do TOTP (rode dentro
-   do pod, ele já tem `bcryptjs`/`otplib` instalados):
+1. Gere o hash da sua senha de login (rode dentro do pod, ele já tem
+   `bcryptjs` instalado):
    ```bash
    kubectl exec -n ia deploy/agent-backend -- node -e \
      "console.log(require('bcryptjs').hashSync('sua-senha', 10))"
-   kubectl exec -n ia deploy/agent-backend -- node -e \
-     "console.log(require('otplib').authenticator.generateSecret())"
    ```
-   Adicione o segredo TOTP no seu app autenticador via **entrada
-   manual** (não precisa de QR code - todo app TOTP aceita digitar o
-   segredo base32 direto).
 2. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
    `agent-backend-auth-secrets`, `whatsapp-bridge-secrets` e
    `postgres-secrets`) e sele com kubeseal (`--scope cluster-wide`,
@@ -264,9 +261,9 @@ Limitações: PDF escaneado sem camada de texto (só imagem dentro do
 PDF) não é lido ainda; e o OCR está configurado para português
 (`OCR_LANG=por`).
 
-Acesse direto pelo IP do seu ingress-nginx (ex.:
-`https://192.168.0.5:30277/`) - não precisa configurar DNS nem
-`/etc/hosts`, o Ingress não exige um hostname específico.
+Acesse direto pelo IP do node, HTTP puro (ex.: `http://192.168.0.5:30277/`)
+- `web-frontend` é exposto via NodePort simples, sem ingress-nginx/TLS
+nem domínio.
 
 `k8s/network-policy.yaml` bloqueia todo egress externo do namespace
 (só permite DNS e tráfego entre pods do cluster) - é o que garante que
@@ -282,11 +279,12 @@ nada saia para a internet.
   direto, pulando o login. Ajuste o label
   `kubernetes.io/metadata.name: ingress-nginx` nesse arquivo se o seu
   namespace do ingress-nginx tiver outro nome.
-- **Login + 2FA obrigatório**: senha (hash bcrypt) e código TOTP são
-  checados em `agent-backend/auth.js`, gate próprio (sem depender de
-  Authelia/SSO externo) - funciona só com IP, sem domínio. Hash e
-  segredo TOTP ficam em Secret (`agent-backend-auth-secrets`), nunca
-  em texto puro no código.
+- **Login obrigatório**: senha (hash bcrypt) checada em
+  `agent-backend/auth.js`, gate próprio (sem depender de Authelia/SSO
+  externo) - funciona por IP puro, sem domínio nem certificado. Hash
+  fica em Secret (`agent-backend-auth-secrets`), nunca em texto puro
+  no código. Sem 2FA por enquanto (rede local confiável) - fica como
+  possível melhoria futura.
 - **Checagem exata do número no WhatsApp**: o `whatsapp-bridge`
   comparava o JID com `startsWith`, o que permitia (na teoria) que um
   número com prefixo igual passasse pela checagem. Agora é comparação

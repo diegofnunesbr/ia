@@ -1,19 +1,19 @@
 import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import { authenticator } from 'otplib'
 import { parse as parseCookie, serialize as serializeCookie } from 'cookie'
 
-// Single-user login replacing Authelia: password + TOTP, no SSO/subdomain
-// needed since everything lives behind this one origin (web-frontend's
-// nginx proxies /api/ here, so the session cookie just works with plain
-// IP access - no cross-domain cookie sharing to worry about).
+// Single-user login replacing Authelia: just username + password for now
+// (TOTP deliberately dropped for simplicity - can be added back later).
+// No SSO/subdomain needed since everything lives behind this one origin
+// (web-frontend's nginx proxies /api/ here, so the session cookie just
+// works with plain IP access - no cross-domain cookie sharing to worry
+// about).
 const USERNAME = process.env.AUTH_USERNAME
 const PASSWORD_HASH = process.env.AUTH_PASSWORD_HASH
-const TOTP_SECRET = process.env.AUTH_TOTP_SECRET
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days, matches the old "remember me"
 
-if (!USERNAME || !PASSWORD_HASH || !TOTP_SECRET) {
-  throw new Error('AUTH_USERNAME, AUTH_PASSWORD_HASH and AUTH_TOTP_SECRET must all be set')
+if (!USERNAME || !PASSWORD_HASH) {
+  throw new Error('AUTH_USERNAME and AUTH_PASSWORD_HASH must both be set')
 }
 
 // token -> expiresAt. In-memory only - a restart logs everyone out, which
@@ -26,10 +26,9 @@ setInterval(() => {
   for (const [token, expiresAt] of sessions) if (expiresAt < now) sessions.delete(token)
 }, 60 * 60 * 1000).unref()
 
-export function verifyCredentials(username, password, totpCode) {
+export function verifyCredentials(username, password) {
   if (username !== USERNAME) return false
-  if (!bcrypt.compareSync(password, PASSWORD_HASH)) return false
-  return authenticator.check(totpCode, TOTP_SECRET)
+  return bcrypt.compareSync(password, PASSWORD_HASH)
 }
 
 export function createSession() {
