@@ -58,9 +58,10 @@ spec:
           resources:
             requests:
               cpu: "1"
-              # qwen2.5:7b-instruct needs ~5-6Gi loaded - VM has 12GB
-              # total, plenty of room for this plus the other pods.
-              memory: 6Gi
+              # qwen2.5:7b-instruct needs ~5-6Gi loaded - 8Gi requested
+              # for extra margin (owner's preference), still well under
+              # the 9Gi limit and the VM's 12GB total.
+              memory: 8Gi
             limits:
               # VM is dedicated to this project (owner's call) and going
               # to 8 cores - lets prefill (processing large, never-cached
