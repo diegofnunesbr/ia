@@ -3,16 +3,18 @@
 App de chat (texto + voz) acessível na rede interna, 100% local: o
 LLM roda no seu próprio cluster via Ollama, sem nenhuma chamada para a
 internet - por isso é seguro colocar senhas/dados sensíveis na
-conversa. Authelia protege o login. Já tem tool-calling ligado ao
-WhatsApp (grupos, contatos, mensagens novas, enviar mensagem, criar
-grupo, converter imagens em PDF), upload de documento/imagem com OCR
-local, e notificação proativa via WhatsApp; smart home, câmeras e
-impressoras ainda não estão conectadas.
+conversa. Login + 2FA (senha + código TOTP) são feitos direto no
+`agent-backend` (ver `agent-backend/auth.js`) - acessível só por IP,
+sem precisar de domínio. Já tem tool-calling ligado ao WhatsApp
+(grupos, contatos, mensagens novas, enviar mensagem, criar grupo,
+converter imagens em PDF), upload de documento/imagem com OCR local, e
+notificação proativa via WhatsApp; smart home, câmeras e impressoras
+ainda não estão conectadas.
 
 Antes do deploy, troque `OWNER_NAME` em `k8s/agent-backend.yaml` pelo
 seu nome/apelido (é o que o assistente usa para se referir a você),
-e o usuário `owner`/`owner@home.lan` em `k8s/secrets.local.yaml` (ver
-seção Secrets) pelo que preferir.
+e as credenciais de login em `k8s/secrets.local.yaml` (ver seção
+Secrets) pelas suas.
 
 ## Serviços
 
@@ -114,34 +116,32 @@ português/precisão que o 7B - troque em `k8s/agent-backend.yaml`
 
 ## Secrets
 
-**Nunca edite `k8s/authelia-secret.example.yaml` com valores reais** -
-ele é só o template, e fica versionado. Copie para um arquivo à parte
-(já coberto pelo `.gitignore`) e edite essa cópia:
+**Nunca edite `k8s/secrets.example.yaml` com valores reais** - ele é
+só o template, e fica versionado. Copie para um arquivo à parte (já
+coberto pelo `.gitignore`) e edite essa cópia:
 
 ```bash
-cp k8s/authelia-secret.example.yaml k8s/secrets.local.yaml
+cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 ```
 
-1. Gere os valores aleatórios da Authelia:
+1. Gere o hash da sua senha de login e o segredo do TOTP (rode dentro
+   do pod, ele já tem `bcryptjs`/`otplib` instalados):
    ```bash
-   openssl rand -hex 32   # JWT_SECRET
-   openssl rand -hex 32   # SESSION_SECRET
-   openssl rand -hex 32   # STORAGE_ENCRYPTION_KEY
+   kubectl exec -n ia deploy/agent-backend -- node -e \
+     "console.log(require('bcryptjs').hashSync('sua-senha', 10))"
+   kubectl exec -n ia deploy/agent-backend -- node -e \
+     "console.log(require('otplib').authenticator.generateSecret())"
    ```
-2. Gere o hash da sua senha de login:
-   ```bash
-   docker run --rm authelia/authelia:4.38 authelia crypto hash generate argon2 --password 'sua-senha'
-   ```
-   Cole o hash em `k8s/secrets.local.yaml`, no secret
-   `authelia-users` (o hash fica num Secret, não num ConfigMap, já que
-   é dado sensível).
-3. Preencha `k8s/secrets.local.yaml` com os valores reais
-   (inclui `authelia-secrets`, `authelia-users`, `whatsapp-bridge-secrets`
-   e `postgres-secrets`) e sele com kubeseal (`--scope cluster-wide`,
+   Adicione o segredo TOTP no seu app autenticador via **entrada
+   manual** (não precisa de QR code - todo app TOTP aceita digitar o
+   segredo base32 direto).
+2. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
+   `agent-backend-auth-secrets`, `whatsapp-bridge-secrets` e
+   `postgres-secrets`) e sele com kubeseal (`--scope cluster-wide`,
    sem newline espúrio via `printf '%s'`), como de costume. Depois de
    selado, o `.yaml` selado (sem dado sensível em texto puro) pode ir
    pro git normalmente.
-4. `onenote-sync-secrets` (mesmo arquivo local) é a exceção - **não sele com
+3. `onenote-sync-secrets` (mesmo arquivo local) é a exceção - **não sele com
    kubeseal**, veja o comentário no próprio arquivo e a seção "OneNote
    pessoal" abaixo para como preenchê-lo e aplicá-lo.
 
@@ -153,8 +153,6 @@ kubectl apply -f k8s/network-policy.yaml
 kubectl apply -f k8s/network-policy-ingress.yaml
 kubectl apply -f k8s/postgres.yaml
 kubectl apply -f k8s/ollama.yaml
-kubectl apply -f k8s/authelia-configmap.yaml
-kubectl apply -f k8s/authelia.yaml
 kubectl apply -f k8s/agent-backend.yaml
 kubectl apply -f k8s/web-frontend.yaml
 kubectl apply -f k8s/whatsapp-bridge.yaml
@@ -266,8 +264,9 @@ Limitações: PDF escaneado sem camada de texto (só imagem dentro do
 PDF) não é lido ainda; e o OCR está configurado para português
 (`OCR_LANG=por`).
 
-Ajuste `ia.home` e `auth.ia.home` no DNS local (ou `/etc/hosts`) para
-o IP do seu ingress-nginx.
+Acesse direto pelo IP do seu ingress-nginx (ex.:
+`https://192.168.0.5:30277/`) - não precisa configurar DNS nem
+`/etc/hosts`, o Ingress não exige um hostname específico.
 
 `k8s/network-policy.yaml` bloqueia todo egress externo do namespace
 (só permite DNS e tráfego entre pods do cluster) - é o que garante que
@@ -280,16 +279,14 @@ nada saia para a internet.
   `agent-backend` pode chamar `ollama`/`postgres`; só `web-frontend` e
   `whatsapp-bridge` podem chamar `agent-backend`). Antes, qualquer
   coisa já dentro do cluster/rede conseguia chamar essas rotas
-  direto, pulando o login da Authelia. Ajuste o label
+  direto, pulando o login. Ajuste o label
   `kubernetes.io/metadata.name: ingress-nginx` nesse arquivo se o seu
   namespace do ingress-nginx tiver outro nome.
-- **2FA obrigatório na Authelia**: a política mudou de `one_factor`
-  para `two_factor`. No primeiro login, ela vai pedir para registrar
-  um app autenticador (Google Authenticator, Aegis, etc.) via QR code
-  antes de liberar o acesso.
-- **Hash de senha em Secret, não ConfigMap**: `users_database.yml`
-  saiu do `authelia-config` (ConfigMap) e virou o secret
-  `authelia-users`, selado como os demais.
+- **Login + 2FA obrigatório**: senha (hash bcrypt) e código TOTP são
+  checados em `agent-backend/auth.js`, gate próprio (sem depender de
+  Authelia/SSO externo) - funciona só com IP, sem domínio. Hash e
+  segredo TOTP ficam em Secret (`agent-backend-auth-secrets`), nunca
+  em texto puro no código.
 - **Checagem exata do número no WhatsApp**: o `whatsapp-bridge`
   comparava o JID com `startsWith`, o que permitia (na teoria) que um
   número com prefixo igual passasse pela checagem. Agora é comparação

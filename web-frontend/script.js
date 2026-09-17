@@ -1,3 +1,12 @@
+const loginScreen = document.getElementById('loginScreen')
+const loginForm = document.getElementById('loginForm')
+const loginUsername = document.getElementById('loginUsername')
+const loginPassword = document.getElementById('loginPassword')
+const loginTotp = document.getElementById('loginTotp')
+const loginError = document.getElementById('loginError')
+const appEl = document.getElementById('app')
+const logoutBtn = document.getElementById('logoutBtn')
+
 const messagesEl = document.getElementById('messages')
 const messagesScrollEl = document.getElementById('messagesScroll')
 const form = document.getElementById('form')
@@ -332,8 +341,9 @@ if (SpeechRecognition) {
   micBtn.title = 'Reconhecimento de voz não suportado neste navegador'
 }
 
-// Init: restore the last open session if it still exists, otherwise start one.
-;(async () => {
+// Restores the last open session if it still exists, otherwise starts one.
+// Only runs once the login gate below confirms there's a valid session.
+async function initApp() {
   const sessions = await fetchSessions()
   const stillExists = sessionId && sessions.some((s) => s.id === sessionId)
 
@@ -343,4 +353,70 @@ if (SpeechRecognition) {
   } else {
     await startNewSession()
   }
+}
+
+function showLogin() {
+  loginScreen.hidden = false
+  appEl.hidden = true
+}
+
+function showApp() {
+  loginScreen.hidden = true
+  appEl.hidden = false
+}
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  loginError.hidden = true
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        username: loginUsername.value,
+        password: loginPassword.value,
+        totp: loginTotp.value,
+      }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      loginError.textContent = data.error || 'Falha ao entrar.'
+      loginError.hidden = false
+      return
+    }
+    loginPassword.value = ''
+    loginTotp.value = ''
+    showApp()
+    await initApp()
+  } catch (err) {
+    loginError.textContent = 'Erro ao falar com o servidor.'
+    loginError.hidden = false
+    console.error(err)
+  }
+})
+
+logoutBtn.addEventListener('click', async () => {
+  try {
+    await fetch('/api/logout', { method: 'POST' })
+  } catch (err) {
+    console.error(err)
+  }
+  location.reload()
+})
+
+// Init: check whether there's already a valid session cookie before
+// showing anything - avoids a flash of the chat UI for a logged-out visitor.
+;(async () => {
+  try {
+    const res = await fetch('/api/me')
+    const data = await res.json()
+    if (data.authenticated) {
+      showApp()
+      await initApp()
+      return
+    }
+  } catch (err) {
+    console.error(err)
+  }
+  showLogin()
 })()

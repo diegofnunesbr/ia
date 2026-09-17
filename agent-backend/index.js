@@ -7,6 +7,16 @@ import { initNotes, searchNotes } from './notes.js'
 import * as whatsapp from './whatsapp.js'
 import { extractText, imageToPdf } from './documents.js'
 import {
+  verifyCredentials,
+  createSession,
+  destroySession,
+  isValidSession,
+  requireAuth,
+  setSessionCookie,
+  clearSessionCookie,
+  getSessionToken,
+} from './auth.js'
+import {
   initSessions,
   ensureSession,
   listSessions,
@@ -371,6 +381,34 @@ async function runTool(name, args) {
 const app = express()
 app.use(express.json())
 
+app.get('/health', (_req, res) => res.json({ ok: true }))
+
+app.post('/login', (req, res) => {
+  const { username, password, totp } = req.body || {}
+  if (!username || !password || !totp) {
+    return res.status(400).json({ error: 'username, password e totp são obrigatórios' })
+  }
+  if (!verifyCredentials(username, password, totp)) {
+    return res.status(401).json({ error: 'credenciais inválidas' })
+  }
+  setSessionCookie(res, createSession())
+  res.json({ ok: true })
+})
+
+app.get('/me', (req, res) => {
+  const token = getSessionToken(req)
+  res.json({ authenticated: Boolean(token) && isValidSession(token) })
+})
+
+app.post('/logout', (req, res) => {
+  const token = getSessionToken(req)
+  if (token) destroySession(token)
+  clearSessionCookie(res)
+  res.json({ ok: true })
+})
+
+app.use(requireAuth)
+
 app.post('/message', async (req, res) => {
   const { from, text } = req.body || {}
   if (!from || !text) return res.status(400).json({ error: 'missing from/text' })
@@ -512,8 +550,6 @@ app.get('/files/:id', (req, res) => {
   res.setHeader('content-disposition', `attachment; filename="${file.filename}"`)
   res.send(file.buffer)
 })
-
-app.get('/health', (_req, res) => res.json({ ok: true }))
 
 Promise.all([initMemory(), initSessions(), initNotes()])
   .then(() => app.listen(PORT, () => console.log(`agent-backend listening on ${PORT}`)))

@@ -48,6 +48,22 @@ spec:
                   key: allowed-number
             - name: USER_WHATSAPP_JID
               value: $(ALLOWED_NUMBER)@s.whatsapp.net
+            # Login gate (replaces Authelia) - see agent-backend/auth.js
+            - name: AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-auth-secrets
+                  key: username
+            - name: AUTH_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-auth-secrets
+                  key: password-hash
+            - name: AUTH_TOTP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-auth-secrets
+                  key: totp-secret
           resources:
             requests:
               cpu: 200m
