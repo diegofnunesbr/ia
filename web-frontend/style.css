@@ -15,6 +15,16 @@ body {
   height: 100vh;
 }
 
+/* The [hidden] attribute normally sets display:none, but the .app rule
+   above (display: flex) overrides it since author styles beat the
+   user-agent stylesheet - without this, the login screen and the app
+   render stacked on top of each other instead of one replacing the
+   other. */
+.app[hidden],
+.login-screen[hidden] {
+  display: none;
+}
+
 .login-screen {
   height: 100vh;
   display: flex;
