@@ -244,6 +244,25 @@ app.get('/contacts', (_req, res) => {
   res.json({ contacts })
 })
 
+// Resolves a raw phone number to its real WhatsApp JID. Some accounts
+// now use the newer privacy-oriented "@lid" identifier instead of the
+// classic "<number>@s.whatsapp.net" - guessing the old format for a
+// number that's actually @lid sends into the void with no error at
+// all (sock.sendMessage resolves fine, delivery just never happens).
+// Only trustworthy way to know which one a number actually uses is to
+// ask WhatsApp directly.
+app.get('/resolve/:number', async (req, res) => {
+  const number = req.params.number.replace(/\D/g, '')
+  try {
+    const [result] = await sock.onWhatsApp(number)
+    if (!result?.exists) return res.status(404).json({ error: 'número não está no WhatsApp' })
+    res.json({ jid: result.jid })
+  } catch (err) {
+    logger.error({ err, number }, 'failed to resolve number')
+    res.status(500).json({ error: 'falha ao resolver número' })
+  }
+})
+
 // Messages received since the last time this was called (across every
 // chat, DM or group). Meant for "do I have anything new?" style questions.
 app.get('/messages/new', (_req, res) => {

@@ -24,11 +24,17 @@ export async function resolveGroup(groupName) {
 
 // Contacts only get resolved by name for people the bridge has already
 // seen (WhatsApp doesn't hand over your full phone contact list easily).
-// If it looks like a phone number, target it directly instead.
+// If it looks like a phone number, ask WhatsApp for the real JID instead
+// of guessing "<number>@s.whatsapp.net" - some accounts now use the
+// newer "@lid" identifier, and a wrong guess sends into the void with
+// no error at all.
 export async function resolveContact(nameOrNumber) {
   const digits = nameOrNumber.replace(/\D/g, '')
   if (digits.length >= 10) {
-    return { jid: `${digits}@s.whatsapp.net`, name: nameOrNumber }
+    const res = await fetch(`${WHATSAPP_BRIDGE_URL}/resolve/${digits}`)
+    if (!res.ok) return null
+    const { jid } = await res.json()
+    return { jid, name: nameOrNumber }
   }
 
   const contacts = await listContacts()
