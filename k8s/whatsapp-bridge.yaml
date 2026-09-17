@@ -19,6 +19,13 @@ metadata:
     app: whatsapp-bridge
 spec:
   replicas: 1
+  # Default RollingUpdate briefly runs old+new pods together, and both
+  # mount the same ReadWriteOnce PVC for the Baileys auth session files -
+  # two processes touching that session concurrently crash-looped both
+  # pods until the old one was force-deleted. Recreate avoids that by
+  # fully stopping the old pod before starting the new one.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: whatsapp-bridge
