@@ -58,8 +58,8 @@ spec:
           resources:
             requests:
               cpu: "1"
-              # qwen2.5:7b-instruct needs ~5-6Gi loaded - VM has 16GB
-              # total now, plenty of room for this plus the other pods.
+              # qwen2.5:7b-instruct needs ~5-6Gi loaded - VM has 12GB
+              # total, plenty of room for this plus the other pods.
               memory: 6Gi
             limits:
               # VM is dedicated to this project (owner's call) and going
@@ -68,7 +68,10 @@ spec:
               # won't benefit past ~6. A limit isn't a reservation, so
               # this doesn't starve the other pods' small CPU requests.
               cpu: "8"
-              memory: 10Gi
+              # VM has 12GB total now (down from 16GB) - 9Gi keeps ~3GB
+              # of margin above the real ~7GB need (weights + KV cache
+              # at num_ctx=16384) for the OS, kubelet, and other pods.
+              memory: 9Gi
           readinessProbe:
             tcpSocket:
               port: 11434
