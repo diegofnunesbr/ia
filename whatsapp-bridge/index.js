@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import express from 'express'
 import qrcode from 'qrcode-terminal'
 import QRCode from 'qrcode'
@@ -43,12 +45,29 @@ function cacheGroupImage(jid, msg) {
 // contact list easily through Baileys, so this fills in from whatever the
 // app syncs (contacts.upsert/update) plus the display name of anyone who
 // messages while the bridge is running. Good enough to resolve "fulano" to
-// a JID for people you actually talk to.
-const CONTACT_CACHE = new Map() // jid -> name
+// a JID for people you actually talk to. Persisted to disk (same PVC as
+// the auth state) so a pod restart doesn't throw away every contact
+// learned so far - it used to be in-memory only, wiped on every deploy.
+const CONTACTS_FILE = path.join(AUTH_DIR, 'contacts.json')
+
+function loadContactCache() {
+  try {
+    const entries = JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8'))
+    return new Map(entries)
+  } catch {
+    return new Map()
+  }
+}
+
+const CONTACT_CACHE = loadContactCache()
 
 function cacheContact(jid, name) {
   if (!jid || !name) return
+  if (CONTACT_CACHE.get(jid) === name) return
   CONTACT_CACHE.set(jid, name)
+  fs.writeFile(CONTACTS_FILE, JSON.stringify([...CONTACT_CACHE.entries()]), (err) => {
+    if (err) logger.error({ err }, 'failed to persist contact cache')
+  })
 }
 
 // Rolling cache of recent text messages per chat (DM or group), so the
