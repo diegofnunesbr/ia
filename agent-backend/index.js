@@ -23,6 +23,7 @@ import {
   getConversationForDisplay,
   getRecentMessages,
   appendMessage,
+  deleteMessagesFrom,
   titleFrom,
 } from './sessions.js'
 
@@ -189,13 +190,7 @@ app.post('/logout', (req, res) => {
 
 app.use(requireAuth)
 
-app.post('/message', async (req, res) => {
-  const { from, text } = req.body || {}
-  if (!from || !text) return res.status(400).json({ error: 'missing from/text' })
-
-  await ensureSession(from)
-  await setTitleIfEmpty(from, titleFrom(text))
-
+async function buildUserContent(from, text) {
   let userContent = `[Data/hora atual: ${currentDateTime()}]\n\n${text}`
 
   const pendingDoc = pendingDocuments.get(from)
@@ -214,57 +209,88 @@ app.post('/message', async (req, res) => {
     console.error('memory recall failed, continuing without it', err)
   }
 
-  await appendMessage(from, { role: 'user', content: userContent })
+  return userContent
+}
 
-  // Lets a client-cancelled request (browser closed tab / hit "Cancelar")
-  // actually stop the Ollama generation, instead of just giving up on
-  // listening while it keeps hogging the single processing slot
-  // (OLLAMA_NUM_PARALLEL=1) in the background.
+async function generateAssistantReply(from, signal) {
+  let downloadUrl
+  for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
+    const recent = await getRecentMessages(from, MAX_HISTORY_MESSAGES)
+    const message = await chat([{ role: 'system', content: SYSTEM_PROMPT }, ...recent], TOOLS, signal)
+
+    if (!message.tool_calls?.length) {
+      const fallback = extractFallbackToolCalls(message.content)
+      if (fallback) {
+        message.tool_calls = fallback
+        message.content = ''
+      }
+    }
+
+    if (!message.tool_calls?.length) {
+      await appendMessage(from, { role: 'assistant', content: message.content })
+      return { reply: message.content?.trim(), downloadUrl }
+    }
+
+    await appendMessage(from, message)
+
+    for (const call of message.tool_calls) {
+      const args =
+        typeof call.function.arguments === 'string'
+          ? JSON.parse(call.function.arguments || '{}')
+          : call.function.arguments || {}
+
+      const result = await runTool(call.function.name, args)
+      if (result.downloadUrl) downloadUrl = result.downloadUrl
+
+      await appendMessage(from, { role: 'tool', content: JSON.stringify(result) })
+    }
+  }
+
+  return { reply: 'Não consegui concluir isso em tempo hábil, pode tentar de novo?', downloadUrl }
+}
+
+app.post('/message', async (req, res) => {
+  const { from, text } = req.body || {}
+  if (!from || !text) return res.status(400).json({ error: 'missing from/text' })
+
+  await ensureSession(from)
+  await setTitleIfEmpty(from, titleFrom(text))
+
+  const userContent = await buildUserContent(from, text)
+  const userMessageId = await appendMessage(from, { role: 'user', content: userContent })
+
   const controller = new AbortController()
   req.on('close', () => controller.abort())
 
   try {
-    let downloadUrl
-    for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round++) {
-      const recent = await getRecentMessages(from, MAX_HISTORY_MESSAGES)
-      const message = await chat(
-        [{ role: 'system', content: SYSTEM_PROMPT }, ...recent],
-        TOOLS,
-        controller.signal
-      )
-
-      if (!message.tool_calls?.length) {
-        const fallback = extractFallbackToolCalls(message.content)
-        if (fallback) {
-          message.tool_calls = fallback
-          message.content = ''
-        }
-      }
-
-      if (!message.tool_calls?.length) {
-        await appendMessage(from, { role: 'assistant', content: message.content })
-        return res.json({ reply: message.content?.trim(), downloadUrl })
-      }
-
-      await appendMessage(from, message)
-
-      for (const call of message.tool_calls) {
-        const args =
-          typeof call.function.arguments === 'string'
-            ? JSON.parse(call.function.arguments || '{}')
-            : call.function.arguments || {}
-
-        const result = await runTool(call.function.name, args)
-        if (result.downloadUrl) downloadUrl = result.downloadUrl
-
-        await appendMessage(from, { role: 'tool', content: JSON.stringify(result) })
-      }
+    const result = await generateAssistantReply(from, controller.signal)
+    res.json({ ...result, userMessageId })
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('message cancelled by client, generation stopped')
+      return
     }
+    console.error('agent failed', err)
+    if (!res.headersSent) res.status(500).json({ error: 'agent failed' })
+  }
+})
 
-    res.json({
-      reply: 'Não consegui concluir isso em tempo hábil, pode tentar de novo?',
-      downloadUrl,
-    })
+app.post('/sessions/:id/messages/:messageId/edit', async (req, res) => {
+  const { id, messageId } = req.params
+  const { text } = req.body || {}
+  if (!text) return res.status(400).json({ error: 'missing text' })
+
+  await deleteMessagesFrom(id, Number(messageId))
+
+  const userContent = await buildUserContent(id, text)
+  await appendMessage(id, { role: 'user', content: userContent })
+
+  const controller = new AbortController()
+  req.on('close', () => controller.abort())
+
+  try {
+    const result = await generateAssistantReply(id, controller.signal)
+    res.json(result)
   } catch (err) {
     if (err.name === 'AbortError') {
       console.log('message cancelled by client, generation stopped')

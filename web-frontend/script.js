@@ -94,7 +94,7 @@ document.addEventListener('click', async (e) => {
   }
 })
 
-function addMessage(role, text, downloadUrl) {
+function addMessage(role, text, downloadUrl, messageId) {
   document.getElementById('emptyState')?.remove()
 
   const el = document.createElement('div')
@@ -102,7 +102,20 @@ function addMessage(role, text, downloadUrl) {
   if (role === 'assistant') {
     el.innerHTML = markdownToHtml(text)
   } else {
-    el.textContent = text
+    const textEl = document.createElement('span')
+    textEl.className = 'msg-text'
+    textEl.textContent = text
+    el.appendChild(textEl)
+
+    if (messageId) el.dataset.messageId = messageId
+
+    const editBtn = document.createElement('button')
+    editBtn.type = 'button'
+    editBtn.className = 'edit-btn'
+    editBtn.textContent = '✏️'
+    editBtn.title = 'Editar mensagem'
+    editBtn.addEventListener('click', () => startEditingMessage(el))
+    el.appendChild(editBtn)
   }
   if (downloadUrl) {
     const link = document.createElement('a')
@@ -115,6 +128,75 @@ function addMessage(role, text, downloadUrl) {
   }
   messagesEl.appendChild(el)
   messagesScrollEl.scrollTop = messagesScrollEl.scrollHeight
+  return el
+}
+
+function startEditingMessage(el) {
+  if (!el.dataset.messageId) return
+  const currentText = el.querySelector('.msg-text').textContent
+
+  el.innerHTML = ''
+  const textarea = document.createElement('textarea')
+  textarea.className = 'edit-textarea'
+  textarea.value = currentText
+  el.appendChild(textarea)
+
+  const actions = document.createElement('div')
+  actions.className = 'edit-actions'
+
+  const saveBtn = document.createElement('button')
+  saveBtn.type = 'button'
+  saveBtn.textContent = 'Salvar'
+  saveBtn.addEventListener('click', () => submitEdit(el, textarea.value))
+  actions.appendChild(saveBtn)
+
+  const cancelBtn = document.createElement('button')
+  cancelBtn.type = 'button'
+  cancelBtn.textContent = 'Cancelar'
+  cancelBtn.addEventListener('click', async () => renderMessages(await fetchSessionMessages(sessionId)))
+  actions.appendChild(cancelBtn)
+
+  el.appendChild(actions)
+  textarea.focus()
+}
+
+async function submitEdit(el, newText) {
+  if (!newText.trim() || waitingForReply) return
+  const messageId = el.dataset.messageId
+
+  let node = el.nextSibling
+  while (node) {
+    const next = node.nextSibling
+    node.remove()
+    node = next
+  }
+  el.remove()
+
+  addMessage('user', newText, undefined, messageId)
+  setWaiting(true)
+  const typingEl = addTypingIndicator()
+
+  try {
+    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages/${messageId}/edit`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: newText }),
+    })
+    const data = await res.json()
+    typingEl.remove()
+    if (!res.ok) {
+      addMessage('assistant', data.error || `Erro do servidor (${res.status}).`)
+      return
+    }
+    addMessage('assistant', data.reply || 'Desculpa, não consegui responder agora.', data.downloadUrl)
+  } catch (err) {
+    typingEl.remove()
+    addMessage('assistant', 'Erro ao falar com o assistente.')
+    console.error(err)
+  } finally {
+    setWaiting(false)
+    renderSessionList()
+  }
 }
 
 function resetMessages() {
@@ -123,7 +205,7 @@ function resetMessages() {
 
 function renderMessages(messages) {
   resetMessages()
-  for (const m of messages) addMessage(m.role, m.content)
+  for (const m of messages) addMessage(m.role, m.content, undefined, m.id)
 }
 
 async function renderSessionList() {
@@ -234,7 +316,7 @@ async function sendMessage(text, viaVoice = false) {
   if (waitingForReply) return
 
   setWaiting(true)
-  addMessage('user', text)
+  const userEl = addMessage('user', text)
   input.value = ''
 
   const controller = new AbortController()
@@ -261,6 +343,7 @@ async function sendMessage(text, viaVoice = false) {
       return
     }
     currentSessionIsUnsaved = false
+    if (data.userMessageId) userEl.dataset.messageId = data.userMessageId
     const reply = data.reply || 'Desculpa, não consegui responder agora.'
     addMessage('assistant', reply, data.downloadUrl)
     if (viaVoice) speak(reply)

@@ -58,7 +58,7 @@ const LEADING_CONTEXT_TAGS = /^(\[[^\]]*\]\n\n)+/
 
 export async function getConversationForDisplay(sessionId) {
   const { rows } = await pool.query(
-    `SELECT role, content FROM chat_messages
+    `SELECT id, role, content FROM chat_messages
      WHERE session_id = $1 AND role IN ('user', 'assistant') AND content IS NOT NULL AND content <> ''
      ORDER BY id ASC`,
     [sessionId]
@@ -66,6 +66,13 @@ export async function getConversationForDisplay(sessionId) {
   return rows.map((r) =>
     r.role === 'user' ? { ...r, content: r.content.replace(LEADING_CONTEXT_TAGS, '') } : r
   )
+}
+
+export async function deleteMessagesFrom(sessionId, messageId) {
+  await pool.query('DELETE FROM chat_messages WHERE session_id = $1 AND id >= $2', [
+    sessionId,
+    messageId,
+  ])
 }
 
 // Recent messages used to build the prompt sent to the model, including
@@ -86,8 +93,8 @@ export async function getRecentMessages(sessionId, limit) {
 }
 
 export async function appendMessage(sessionId, message) {
-  await pool.query(
-    'INSERT INTO chat_messages (session_id, role, content, tool_calls) VALUES ($1, $2, $3, $4)',
+  const { rows } = await pool.query(
+    'INSERT INTO chat_messages (session_id, role, content, tool_calls) VALUES ($1, $2, $3, $4) RETURNING id',
     [
       sessionId,
       message.role,
@@ -96,6 +103,7 @@ export async function appendMessage(sessionId, message) {
     ]
   )
   await pool.query('UPDATE chat_sessions SET updated_at = now() WHERE id = $1', [sessionId])
+  return rows[0].id
 }
 
 export function titleFrom(text) {
