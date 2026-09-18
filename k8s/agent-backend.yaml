@@ -28,8 +28,6 @@ spec:
               value: qwen2.5:7b-instruct
             - name: OLLAMA_URL
               value: http://ollama:11434
-            - name: WHATSAPP_BRIDGE_URL
-              value: http://whatsapp-bridge:3001
             - name: PUBLIC_BASE_URL
               value: /api
             - name: EMBED_MODEL
@@ -41,13 +39,6 @@ spec:
                   key: password
             - name: DATABASE_URL
               value: postgresql://assistant:$(POSTGRES_PASSWORD)@postgres:5432/assistant
-            - name: ALLOWED_NUMBER
-              valueFrom:
-                secretKeyRef:
-                  name: whatsapp-bridge-secrets
-                  key: allowed-number
-            - name: USER_WHATSAPP_JID
-              value: $(ALLOWED_NUMBER)@s.whatsapp.net
             # Login gate (replaces Authelia) - see agent-backend/auth.js
             - name: AUTH_USERNAME
               valueFrom:

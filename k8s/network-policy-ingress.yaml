@@ -17,9 +17,6 @@ spec:
         - podSelector:
             matchLabels:
               app: web-frontend
-        - podSelector:
-            matchLabels:
-              app: whatsapp-bridge
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -62,24 +59,6 @@ spec:
         - podSelector:
             matchLabels:
               app: onenote-sync
-
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: whatsapp-bridge-ingress
-  namespace: ia
-spec:
-  podSelector:
-    matchLabels:
-      app: whatsapp-bridge
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: agent-backend
 
 # No ingress NetworkPolicy for web-frontend: it's now exposed directly via
 # NodePort (plain HTTP, no ingress-nginx in front), so it's meant to be

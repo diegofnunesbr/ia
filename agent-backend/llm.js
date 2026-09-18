@@ -23,16 +23,16 @@ export async function chat(messages, tools, signal) {
       options: {
         // Caps worst-case latency - an unbounded response can ramble on
         // for a long time on CPU. Raised from 400 since summarizing a
-        // big tool result (e.g. a pile of WhatsApp messages) can need
-        // more room to actually finish the thought.
+        // big tool result can need more room to actually finish the
+        // thought.
         num_predict: 700,
         // Ollama's default (2048) is too small for our system prompt +
         // tool schemas alone, before any conversation history - going
         // over it forces an expensive context shift (or a runner
         // restart) mid-request instead of just prefilling once. Raised
-        // again from 8192 for headroom against large tool results (a
-        // big WhatsApp digest). The KV cache cost of a bigger window is
-        // trivial (well under 1GB even at this size).
+        // again from 8192 for headroom against large tool results. The
+        // KV cache cost of a bigger window is trivial (well under 1GB
+        // even at this size).
         num_ctx: 16384,
       },
     }),

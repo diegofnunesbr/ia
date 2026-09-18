@@ -6,11 +6,8 @@ internet - por isso é seguro colocar senhas/dados sensíveis na
 conversa. Login (usuário + senha) é feito direto no `agent-backend`
 (ver `agent-backend/auth.js`) - acessível via HTTP puro por IP, sem
 precisar de domínio nem certificado (2FA pode ser adicionado depois,
-deixado de fora por enquanto pra manter simples). Já tem tool-calling
-ligado ao WhatsApp
-(grupos, contatos, mensagens novas, enviar mensagem, criar grupo,
-converter imagens em PDF), upload de documento/imagem com OCR local, e
-notificação proativa via WhatsApp; smart home, câmeras e impressoras
+deixado de fora por enquanto pra manter simples). Já tem upload de
+documento/imagem com OCR local; smart home, câmeras e impressoras
 ainda não estão conectadas.
 
 Antes do deploy, troque `OWNER_NAME` em `k8s/agent-backend.yaml` pelo
@@ -33,24 +30,6 @@ Secrets) pelas suas.
 - `postgres`: com a extensão `pgvector`, guarda os fatos permanentes
   que o assistente aprende sobre você (nomes, preferências, etc.) e o
   histórico de todas as conversas.
-- `whatsapp-bridge`: não é mais o canal principal (isso é o
-  `web-frontend`), mas dá controle amplo do seu WhatsApp:
-  - **determinística**: imagem enviada num grupo específico com
-    legenda "pdf" é convertida e devolvida como PDF ali mesmo, sem
-    passar pelo LLM (mais rápido e previsível).
-  - **por tool-calling**, pedindo em linguagem natural no
-    `web-frontend`: listar grupos e contatos, ver mensagens novas
-    ("tem alguma mensagem nova?"), mandar mensagem para alguém
-    ("responda o Fulano dizendo que já vou"), criar grupo, converter
-    imagens recentes de um grupo em PDF (com link de download no
-    chat), e avisar você mesmo no WhatsApp quando uma tarefa terminar.
-  Contatos e mensagens só existem em cache de quando o bridge está
-  rodando (imagens: até 50/grupo por 24h) - não dá pra buscar
-  histórico de antes do bridge existir, nem contatos que nunca
-  mandaram mensagem enquanto ele estava no ar. A conversão de imagem
-  em PDF (legenda "pdf" no grupo, ou pedido em linguagem natural) é
-  feita direto no próprio `whatsapp-bridge` (`pdf-lib`), sem depender
-  de nenhum serviço externo.
 - `onenote-sync`: CronJob (a cada 6h) que sincroniza as páginas do seu
   OneNote pessoal (Microsoft Graph API) para o Postgres, com
   embeddings - o assistente consulta isso via search_notes.
@@ -61,27 +40,20 @@ Nota sobre privacidade da voz: o reconhecimento de voz do navegador
 senhas faladas em voz alta), me avise para trocarmos por Whisper
 self-hosted.
 
-### Sobre o isolamento de rede e o WhatsApp
-
-O WhatsApp é um serviço na nuvem - não existe forma de usá-lo sem sair
-para a internet. Por isso o isolamento é por camada de confiança, não
-"tudo trancado":
+### Sobre o isolamento de rede
 
 - `agent-backend` e `ollama` (onde ficam senhas e dados sensíveis da
   conversa) continuam sem nenhum egress externo.
-- `whatsapp-bridge` e `onenote-sync` são as únicas exceções - o
-  primeiro precisa falar com os servidores do WhatsApp, o segundo com
-  a Microsoft (Graph API). Nenhum dos dois recebe as senhas que você
-  fala pro assistente - só trocam dados com o Postgres/`agent-backend`
-  internamente (mensagens do WhatsApp e conteúdo do OneNote,
-  respectivamente).
+- `onenote-sync` é a única exceção - precisa falar com a Microsoft
+  (Graph API). Não recebe as senhas que você fala pro assistente - só
+  troca dados com o Postgres/`agent-backend` internamente (conteúdo do
+  OneNote).
 
 ## Build das imagens
 
 ```bash
 docker build -t ia/agent-backend:latest agent-backend/
 docker build -t ia/web-frontend:latest web-frontend/
-docker build -t ia/whatsapp-bridge:latest whatsapp-bridge/
 ```
 
 Carregue as imagens no seu cluster (import direto se for k3s/k0s, ou
@@ -133,8 +105,7 @@ cp k8s/secrets.example.yaml k8s/secrets.local.yaml
      "console.log(require('bcryptjs').hashSync('sua-senha', 10))"
    ```
 2. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
-   `agent-backend-auth-secrets`, `whatsapp-bridge-secrets` e
-   `postgres-secrets`) e sele com kubeseal (`--scope cluster-wide`,
+   `agent-backend-auth-secrets` e `postgres-secrets`) e sele com kubeseal (`--scope cluster-wide`,
    sem newline espúrio via `printf '%s'`), como de costume. Depois de
    selado, o `.yaml` selado (sem dado sensível em texto puro) pode ir
    pro git normalmente.
@@ -153,15 +124,7 @@ kubectl apply -f k8s/ollama.yaml
 kubectl apply -f k8s/agent-backend.yaml
 kubectl apply -f k8s/web-frontend.yaml
 kubectl apply -f k8s/web-frontend-ingress-allow.yaml
-kubectl apply -f k8s/whatsapp-bridge.yaml
 kubectl apply -f k8s/onenote-sync.yaml
-```
-
-No primeiro deploy do `whatsapp-bridge`, veja os logs para o QR code
-de pareamento (escaneie no WhatsApp > Aparelhos conectados):
-
-```bash
-kubectl logs -n ia deploy/whatsapp-bridge -f
 ```
 
 ## OneNote pessoal
@@ -205,52 +168,6 @@ O refresh token se renova automaticamente a cada execução - você não
 precisa repetir o login, a menos que fique mais de ~90 dias sem o
 CronJob rodar (ex.: cluster desligado por muito tempo).
 
-## Imagem → PDF pelo WhatsApp
-
-1. Antes de configurar `pdf-group-id` no secret, faça o deploy e mande
-   qualquer mensagem no grupo desejado - o log do bridge vai mostrar o
-   JID (`message from unconfigured group ...`).
-2. Preencha `pdf-group-id` no secret (ver seção Secrets) com esse JID
-   e reaplique/resele.
-3. Envie uma imagem nesse grupo com a legenda `pdf` - o bot responde
-   na hora com o PDF já convertido, como documento.
-
-A palavra-gatilho é configurável via `PDF_TRIGGER_WORD` (padrão: `pdf`).
-
-## Converter imagens pedindo no chat
-
-Sem precisar configurar `pdf-group-id`: no `web-frontend`, basta pedir
-algo como "acesse o grupo Pessoal do WhatsApp e converta as imagens
-para PDF". O assistente lista os grupos, resolve o nome, converte as
-imagens em cache daquele grupo e responde com um link de download na
-própria conversa (o arquivo fica disponível por 30 minutos).
-
-Requisitos: o modelo configurado em `AGENT_MODEL` precisa suportar
-tool-calling no Ollama (Qwen2.5 e Llama 3.1 suportam). Se o modelo
-ignorar as ferramentas ou alucinar o nome do grupo, verifique se o
-`ollama pull` baixou a versão `-instruct` correta.
-
-## Controlar o WhatsApp pelo chat
-
-Exemplos do que já dá para pedir no `web-frontend`:
-
-- "Tem alguma mensagem nova?" - lista o que chegou desde a última vez
-  que você perguntou (em qualquer conversa, individual ou grupo).
-- "Responda o Fulano dizendo que já estou chegando" - resolve o
-  contato pelo nome (ou aceita um número direto) e manda a mensagem.
-- "Cria um grupo chamado Viagem com o Fulano e a Ciclana" - passe os
-  números de telefone dos participantes.
-- "Me avisa no WhatsApp quando terminar de converter essas imagens" -
-  o assistente conclui a tarefa e manda uma mensagem para você mesmo
-  (`USER_WHATSAPP_JID`, o mesmo número de `ALLOWED_NUMBER`).
-
-Limite real: como o WhatsApp não expõe sua agenda de contatos
-completa, o assistente só resolve pelo nome quem já apareceu no cache
-de contatos (mensagens recebidas, ou o que o WhatsApp sincronizou). Um
-número de telefone direto sempre funciona. Antes de mandar mensagem ou
-criar grupo, o assistente foi instruído a confirmar o destinatário com
-você - vale conferir a resposta antes de considerar concluído.
-
 ## Documentos e imagens no chat (OCR local)
 
 O botão 📎 no `web-frontend` sobe uma imagem ou PDF; o `agent-backend`
@@ -274,30 +191,17 @@ nada saia para a internet.
 
 - **`k8s/network-policy-ingress.yaml`**: cada serviço só aceita
   conexão de quem realmente precisa falar com ele (ex.: só
-  `agent-backend` pode chamar `ollama`/`postgres`; só `web-frontend` e
-  `whatsapp-bridge` podem chamar `agent-backend`). Antes, qualquer
-  coisa já dentro do cluster/rede conseguia chamar essas rotas
-  direto, pulando o login. Ajuste o label
-  `kubernetes.io/metadata.name: ingress-nginx` nesse arquivo se o seu
-  namespace do ingress-nginx tiver outro nome.
+  `agent-backend` pode chamar `ollama`/`postgres`; só `web-frontend`
+  pode chamar `agent-backend`). Antes, qualquer coisa já dentro do
+  cluster/rede conseguia chamar essas rotas direto, pulando o login.
+  Ajuste o label `kubernetes.io/metadata.name: ingress-nginx` nesse
+  arquivo se o seu namespace do ingress-nginx tiver outro nome.
 - **Login obrigatório**: senha (hash bcrypt) checada em
   `agent-backend/auth.js`, gate próprio (sem depender de Authelia/SSO
   externo) - funciona por IP puro, sem domínio nem certificado. Hash
   fica em Secret (`agent-backend-auth-secrets`), nunca em texto puro
   no código. Sem 2FA por enquanto (rede local confiável) - fica como
   possível melhoria futura.
-- **Checagem exata do número no WhatsApp**: o `whatsapp-bridge`
-  comparava o JID com `startsWith`, o que permitia (na teoria) que um
-  número com prefixo igual passasse pela checagem. Agora é comparação
-  exata do JID completo.
-- **Gatilho de PDF no grupo restrito a você**: só quem tem o número em
-  `ALLOWED_NUMBER` consegue disparar a conversão por legenda dentro do
-  grupo - antes, qualquer membro do grupo conseguia.
-- **Proteção contra prompt injection via WhatsApp**: como o assistente
-  agora manda mensagem e cria grupo, o system prompt deixa explícito
-  que conteúdo de mensagens de terceiros é dado a reportar, nunca uma
-  instrução a executar - sem isso, alguém poderia tentar manipular o
-  modelo através do texto de uma mensagem recebida.
 
 ## Hardware (revisão antes do primeiro deploy)
 
