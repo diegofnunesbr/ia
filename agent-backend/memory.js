@@ -23,7 +23,7 @@ export async function rememberFact(content) {
   ])
 }
 
-const MAX_RELEVANT_DISTANCE = 0.5
+const MAX_RELEVANT_DISTANCE = 0.56
 
 export async function recallRelevant(query, limit = 5) {
   const embedding = await embed(query)
