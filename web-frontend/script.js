@@ -21,6 +21,7 @@ const menuToggle = document.getElementById('menuToggle')
 
 const CURRENT_SESSION_KEY = 'assistant-current-session-id'
 let sessionId = localStorage.getItem(CURRENT_SESSION_KEY)
+let currentSessionIsUnsaved = false
 
 // crypto.randomUUID() only exists in a secure context (https:, or
 // localhost) - this app is served over plain HTTP by design, so it's
@@ -158,19 +159,20 @@ async function renderSessionList() {
 
 async function switchToSession(id) {
   setCurrentSession(id)
+  currentSessionIsUnsaved = false
   renderMessages(await fetchSessionMessages(id))
   renderSessionList()
   sidebar.classList.remove('open')
 }
 
 async function startNewSession() {
-  const sessions = await fetchSessions()
-  if (sessionId && !sessions.some((s) => s.id === sessionId)) {
+  if (currentSessionIsUnsaved) {
     resetMessages()
     sidebar.classList.remove('open')
     return
   }
   setCurrentSession(newSessionId())
+  currentSessionIsUnsaved = true
   resetMessages()
   renderSessionList()
   sidebar.classList.remove('open')
@@ -254,9 +256,11 @@ async function sendMessage(text, viaVoice = false) {
         showLogin()
         return
       }
+      currentSessionIsUnsaved = false
       addMessage('assistant', data.error || `Erro do servidor (${res.status}).`)
       return
     }
+    currentSessionIsUnsaved = false
     const reply = data.reply || 'Desculpa, não consegui responder agora.'
     addMessage('assistant', reply, data.downloadUrl)
     if (viaVoice) speak(reply)
@@ -356,9 +360,11 @@ async function initApp() {
   const stillExists = sessionId && sessions.some((s) => s.id === sessionId)
 
   if (stillExists) {
+    currentSessionIsUnsaved = false
     renderMessages(await fetchSessionMessages(sessionId))
     renderSessionList()
   } else {
+    currentSessionIsUnsaved = false
     await startNewSession()
   }
 }
