@@ -97,6 +97,10 @@ async function startSocket() {
     auth: state,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: false,
+    // Baileys defaults this to true, which tells WhatsApp this linked
+    // device is actively online - the phone then assumes messages are
+    // already being seen elsewhere and suppresses push notifications.
+    markOnlineOnConnect: false,
   })
 
   sock.ev.on('creds.update', saveCreds)
