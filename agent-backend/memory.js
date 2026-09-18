@@ -23,11 +23,13 @@ export async function rememberFact(content) {
   ])
 }
 
+const MAX_RELEVANT_DISTANCE = 0.5
+
 export async function recallRelevant(query, limit = 5) {
   const embedding = await embed(query)
   const { rows } = await pool.query(
-    'SELECT content FROM memories ORDER BY embedding <=> $1 LIMIT $2',
-    [JSON.stringify(embedding), limit]
+    'SELECT content FROM memories WHERE embedding <=> $1 < $3 ORDER BY embedding <=> $1 LIMIT $2',
+    [JSON.stringify(embedding), limit, MAX_RELEVANT_DISTANCE]
   )
   return rows.map((r) => r.content)
 }
