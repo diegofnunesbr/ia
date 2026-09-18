@@ -124,7 +124,7 @@ Limitações: PDF escaneado sem camada de texto (só imagem dentro do
 PDF) não é lido ainda; e o OCR está configurado para português
 (`OCR_LANG=por`).
 
-Acesse direto pelo IP do node, HTTP puro (ex.: `http://192.168.0.5:30277/`)
+Acesse direto pelo IP do node, HTTP puro (ex.: `http://192.168.0.4:30277/`)
 - `web-frontend` é exposto via NodePort simples, sem ingress-nginx/TLS
 nem domínio.
 
