@@ -30,9 +30,6 @@ Secrets) pelas suas.
 - `postgres`: com a extensão `pgvector`, guarda os fatos permanentes
   que o assistente aprende sobre você (nomes, preferências, etc.) e o
   histórico de todas as conversas.
-- `onenote-sync`: CronJob (a cada 6h) que sincroniza as páginas do seu
-  OneNote pessoal (Microsoft Graph API) para o Postgres, com
-  embeddings - o assistente consulta isso via search_notes.
 
 Nota sobre privacidade da voz: o reconhecimento de voz do navegador
 (Web Speech API) no Chrome envia o áudio para os servidores da Google
@@ -42,12 +39,8 @@ self-hosted.
 
 ### Sobre o isolamento de rede
 
-- `agent-backend` e `ollama` (onde ficam senhas e dados sensíveis da
-  conversa) continuam sem nenhum egress externo.
-- `onenote-sync` é a única exceção - precisa falar com a Microsoft
-  (Graph API). Não recebe as senhas que você fala pro assistente - só
-  troca dados com o Postgres/`agent-backend` internamente (conteúdo do
-  OneNote).
+Nenhum serviço tem egress externo - `k8s/network-policy.yaml` bloqueia
+tudo exceto DNS e tráfego entre pods do próprio cluster.
 
 ## Build das imagens
 
@@ -106,9 +99,6 @@ cp k8s/secrets.example.yaml k8s/secrets.local.yaml
    sem newline espúrio via `printf '%s'`), como de costume. Depois de
    selado, o `.yaml` selado (sem dado sensível em texto puro) pode ir
    pro git normalmente.
-3. `onenote-sync-secrets` (mesmo arquivo local) é a exceção - **não sele com
-   kubeseal**, veja o comentário no próprio arquivo e a seção "OneNote
-   pessoal" abaixo para como preenchê-lo e aplicá-lo.
 
 ## Deploy
 
@@ -121,49 +111,7 @@ kubectl apply -f k8s/ollama.yaml
 kubectl apply -f k8s/agent-backend.yaml
 kubectl apply -f k8s/web-frontend.yaml
 kubectl apply -f k8s/web-frontend-ingress-allow.yaml
-kubectl apply -f k8s/onenote-sync.yaml
 ```
-
-## OneNote pessoal
-
-1. **Registre um app no Azure AD** (portal.azure.com → Entra ID → App
-   registrations → New registration):
-   - Supported account types: "Personal Microsoft accounts only".
-   - Authentication → Advanced settings → "Allow public client flows": Yes
-     (necessário para o login por device code).
-   - API permissions → Add → Microsoft Graph → Delegated → adicione
-     `Notes.Read` e `offline_access`.
-   - Anote o "Application (client) ID".
-2. **Login único** (na sua máquina, não no cluster):
-   ```bash
-   cd onenote-sync
-   npm install
-   ONENOTE_CLIENT_ID=<seu-client-id> npm run auth
-   ```
-   Siga a URL/código impressos para autorizar. No final, o script
-   imprime um refresh token.
-3. Preencha `client-id` e `refresh-token` em `k8s/secrets.local.yaml`
-   (a cópia local, não o `.example.yaml` - ver seção Secrets), no
-   bloco `onenote-sync-secrets`, e aplique **direto, sem kubeseal**:
-   ```bash
-   kubectl apply -f k8s/secrets.local.yaml
-   ```
-   (isso reaplica todos os secrets daquele arquivo - se os outros já
-   estiverem selados/aplicados separadamente, extraia só o bloco do
-   `onenote-sync-secrets` para um arquivo à parte antes de aplicar)
-4. Build da imagem e primeira sincronização manual, para validar antes
-   de esperar pelo cron:
-   ```bash
-   docker build -t ia/onenote-sync:latest onenote-sync/
-   kubectl create job -n ia onenote-sync-manual --from=cronjob/onenote-sync
-   kubectl logs -n ia job/onenote-sync-manual -f
-   ```
-
-Depois disso, a sincronização roda sozinha a cada 6h
-(`k8s/onenote-sync.yaml`, ajuste `schedule` se quiser outro intervalo).
-O refresh token se renova automaticamente a cada execução - você não
-precisa repetir o login, a menos que fique mais de ~90 dias sem o
-CronJob rodar (ex.: cluster desligado por muito tempo).
 
 ## Documentos e imagens no chat (OCR local)
 

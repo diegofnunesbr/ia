@@ -3,7 +3,6 @@ import express from 'express'
 import multer from 'multer'
 import { chat } from './llm.js'
 import { initMemory, rememberFact, recallRelevant } from './memory.js'
-import { initNotes, searchNotes } from './notes.js'
 import { extractText, imageToPdf } from './documents.js'
 import {
   verifyCredentials,
@@ -55,8 +54,6 @@ Smart home/câmeras/impressoras: ainda não conectadas.
 Fato pessoal duradouro (família, preferências) -> use remember_fact.
 "[Memória relevante: ...]" no início da mensagem = fatos já salvos, use sem
 repetir o trecho.
-search_notes busca no OneNote pessoal de ${OWNER_NAME} (sincronizado a cada
-algumas horas, pode estar desatualizado).
 "[Data/hora atual: ...]" no início da mensagem = data/hora real agora, sempre
 confie nela e nunca chute uma diferente.`
 
@@ -71,20 +68,6 @@ function currentDateTime() {
 }
 
 const TOOLS = [
-  {
-    type: 'function',
-    function: {
-      name: 'search_notes',
-      description: `Busca nas notas do OneNote pessoal de ${OWNER_NAME} (sincronizadas periodicamente) por trechos relevantes à pergunta.`,
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'O que buscar nas notas.' },
-        },
-        required: ['query'],
-      },
-    },
-  },
   {
     type: 'function',
     function: {
@@ -164,16 +147,6 @@ function extractFallbackToolCalls(content) {
 }
 
 async function runTool(name, args) {
-  if (name === 'search_notes') {
-    if (!args.query) return { error: 'query é obrigatório' }
-    try {
-      const results = await searchNotes(args.query)
-      return { notes: results.map((n) => ({ title: n.title, excerpt: n.content.slice(0, 800) })) }
-    } catch (err) {
-      return { error: `falha ao buscar notas: ${err.message}` }
-    }
-  }
-
   if (name === 'remember_fact') {
     if (!args.fact) return { error: 'fact é obrigatório' }
     await rememberFact(args.fact)
@@ -357,7 +330,7 @@ app.get('/files/:id', (req, res) => {
   res.send(file.buffer)
 })
 
-Promise.all([initMemory(), initSessions(), initNotes()])
+Promise.all([initMemory(), initSessions()])
   .then(() => app.listen(PORT, () => console.log(`agent-backend listening on ${PORT}`)))
   .catch((err) => {
     console.error('failed to init database', err)

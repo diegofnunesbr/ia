@@ -1,6 +1,3 @@
-# Restricts which pods can call each internal service, so the login
-# gate in agent-backend isn't the only thing standing between an
-# already-on-the-network attacker and agent-backend/ollama/postgres.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -35,9 +32,6 @@ spec:
         - podSelector:
             matchLabels:
               app: agent-backend
-        - podSelector:
-            matchLabels:
-              app: onenote-sync
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -56,10 +50,3 @@ spec:
         - podSelector:
             matchLabels:
               app: agent-backend
-        - podSelector:
-            matchLabels:
-              app: onenote-sync
-
-# No ingress NetworkPolicy for web-frontend: it's now exposed directly via
-# NodePort (plain HTTP, no ingress-nginx in front), so it's meant to be
-# reachable from the whole LAN - that's the actual entry point of the app.

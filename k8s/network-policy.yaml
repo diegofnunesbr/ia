@@ -4,18 +4,10 @@ metadata:
   name: deny-external-egress
   namespace: ia
 spec:
-  # onenote-sync is excluded on purpose: it needs to reach Microsoft's
-  # own servers to work. Everything that touches the LLM or secrets
-  # (agent-backend, ollama) stays fully locked down.
-  podSelector:
-    matchExpressions:
-      - key: app
-        operator: NotIn
-        values: ["onenote-sync"]
+  podSelector: {}
   policyTypes:
     - Egress
   egress:
-    # DNS
     - to:
         - namespaceSelector: {}
       ports:
@@ -23,6 +15,5 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # Any traffic within the cluster (pod-to-pod, other namespaces if needed)
     - to:
         - namespaceSelector: {}
