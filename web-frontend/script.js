@@ -35,14 +35,6 @@ function setCurrentSession(id) {
   localStorage.setItem(CURRENT_SESSION_KEY, id)
 }
 
-async function apiCreateSession(id, title) {
-  await fetch('/api/sessions', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ id, title: title || null }),
-  })
-}
-
 async function fetchSessions() {
   const res = await fetch('/api/sessions')
   const data = await res.json()
@@ -172,9 +164,13 @@ async function switchToSession(id) {
 }
 
 async function startNewSession() {
-  const id = newSessionId()
-  await apiCreateSession(id)
-  setCurrentSession(id)
+  const sessions = await fetchSessions()
+  if (sessionId && !sessions.some((s) => s.id === sessionId)) {
+    resetMessages()
+    sidebar.classList.remove('open')
+    return
+  }
+  setCurrentSession(newSessionId())
   resetMessages()
   renderSessionList()
   sidebar.classList.remove('open')
