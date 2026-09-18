@@ -52,10 +52,11 @@ mensagem, pra você ler e comentar sobre o conteúdo. Anexo de PDF é só leitur
 via OCR (não faz sentido converter um PDF em PDF).
 Smart home/câmeras/impressoras: ainda não conectadas.
 Fato pessoal duradouro (família, preferências) -> use remember_fact.
-"[Memória relevante: ...]" no início da mensagem = fatos já salvos, use sem
-repetir o trecho.
-"[Data/hora atual: ...]" no início da mensagem = data/hora real agora, sempre
-confie nela e nunca chute uma diferente.`
+Às vezes a mensagem do usuário vem precedida de um lembrete automático
+interno com fatos já salvos sobre ele, ou com a data/hora real agora.
+Use essa informação normalmente na resposta, mas nunca cite, repita ou
+mencione que recebeu um lembrete - responda direto, como se você já
+soubesse.`
 
 const TIMEZONE = process.env.TIMEZONE || 'America/Sao_Paulo'
 
