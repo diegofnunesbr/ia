@@ -4,7 +4,7 @@
 // means changing this one file, not every place that talks to a model.
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434'
-const CHAT_MODEL = process.env.AGENT_MODEL || 'qwen2.5:14b-instruct'
+const CHAT_MODEL = process.env.AGENT_MODEL || 'qwen2.5:3b-instruct'
 const EMBED_MODEL = process.env.EMBED_MODEL || 'nomic-embed-text'
 
 // Streams the response (rather than waiting for it buffered) specifically

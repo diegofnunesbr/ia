@@ -25,7 +25,7 @@ spec:
             - name: AI_NAME
               value: "IA" # nome que a IA usa para si mesma
             - name: AGENT_MODEL
-              value: qwen2.5:7b-instruct
+              value: qwen2.5:3b-instruct
             - name: OLLAMA_URL
               value: http://ollama:11434
             - name: PUBLIC_BASE_URL

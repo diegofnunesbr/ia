@@ -25,7 +25,7 @@ Secrets) pelas suas.
   `chat_sessions`/`chat_messages`), não em memória - sobrevive a
   restart e permite ter várias conversas separadas, como aqui no
   Claude.
-- `ollama`: serve o modelo local (Qwen2.5 14B por padrão) e o modelo
+- `ollama`: serve o modelo local (Qwen2.5 3B por padrão) e o modelo
   de embeddings (`nomic-embed-text`) usado pela memória.
 - `postgres`: com a extensão `pgvector`, guarda os fatos permanentes
   que o assistente aprende sobre você (nomes, preferências, etc.) e o
@@ -73,20 +73,17 @@ kubectl exec -n ia deploy/ollama -- ollama pull qwen2.5:3b-instruct
 kubectl exec -n ia deploy/ollama -- ollama pull nomic-embed-text
 ```
 
-Testado em CPU (6-8 cores, sem GPU), sem streaming pro usuário final
-(a resposta só aparece pronta, não palavra por palavra):
+Rodando `qwen2.5:3b-instruct` (padrão), CPU sem GPU, sem streaming pro
+usuário final (a resposta só aparece pronta, não palavra por palavra):
+~10-15s numa pergunta simples, aquecido.
 
-| Modelo | Tempo (pergunta simples, aquecido) |
-|---|---|
-| `qwen2.5:14b-instruct` | ~1min13s |
-| `qwen2.5:7b-instruct` | ~33s |
-| `qwen2.5:3b-instruct` (padrão atual) | ~10-15s |
-
-Mais núcleos de CPU não ajudam muito além de ~6 (o gargalo em CPU
-puro é banda de memória, não contagem de núcleos - só GPU resolve de
-verdade). O 3B é bem mais rápido mas comete mais deslizes de
-português/precisão que o 7B - troque em `k8s/agent-backend.yaml`
-(`AGENT_MODEL`) se preferir mais qualidade em troca de mais demora.
+Esse modelo foi escolhido deliberadamente em vez de um 7B/14B maior -
+desde que essa VM passou a hospedar vários outros serviços (não só a
+IA), o orçamento de CPU/RAM ficou bem mais apertado, e o 3B é o que
+cabe confortavelmente nesse espaço menor. Ele comete mais deslizes de
+português/precisão que os modelos maiores; se um dia sobrar mais
+recursos dedicados, dá pra trocar em `k8s/agent-backend.yaml`
+(`AGENT_MODEL`) em troca de mais demora e memória.
 
 ## Secrets
 
@@ -203,32 +200,28 @@ nada saia para a internet.
   no código. Sem 2FA por enquanto (rede local confiável) - fica como
   possível melhoria futura.
 
-## Hardware (revisão antes do primeiro deploy)
+## Hardware
 
-Antes só o `ollama` tinha `resources` definido; os demais serviços
-podiam consumir CPU/RAM sem limite algum, o que é arriscado dividindo
-o mesmo host com suas outras VMs no Proxmox. Agora todos os
-deployments têm `requests`/`limits`, e o `ollama` especificamente
-ficou mais enxuto sem perder capacidade:
+Essa VM deixou de ser dedicada só a esse projeto e passou a hospedar
+vários outros serviços (ArgoCD, Jenkins, Nextcloud, Samba, etc.), então
+o `ollama` foi redimensionado pro mínimo que ainda roda o 3B + o
+modelo de embeddings confortavelmente, em vez de aproveitar toda a
+VM:
 
 - `OLLAMA_NUM_PARALLEL=1`: uma requisição por vez (você é o único
   usuário, não precisa de mais).
 - `OLLAMA_MAX_LOADED_MODELS=2`: mantém o modelo de chat e o de
   embeddings carregados ao mesmo tempo, evitando ficar descarregando e
-  recarregando a cada mensagem (isso seria bem mais lento e usaria
-  mais disco/CPU do que manter os dois residentes).
-- `OLLAMA_KEEP_ALIVE=10m`: descarrega o modelo da RAM depois de 10 min
-  sem uso, devolvendo a memória para o host quando você não está
-  usando o assistente. Custa alguns segundos de recarga na primeira
-  mensagem depois de um período ocioso - aumente esse valor se isso
-  incomodar.
-- Requisição de CPU/RAM do `ollama` reduzida (de 4 CPU/12Gi para 2
-  CPU/10Gi) e o teto (`limits`) de CPU também caiu (de 8 para 6) -
-  ainda é suficiente para o Qwen2.5 14B, só reserva menos de garantia
-  quando ocioso.
-- PVCs superdimensionados reduzidos: `ollama-models` de 30Gi para 15Gi
-  (o modelo ocupa ~10Gi) e `postgres-data` de 5Gi para 2Gi (uso real é
-  bem menor para um único usuário).
+  recarregando a cada mensagem.
+- `OLLAMA_KEEP_ALIVE=60m`: descarrega o modelo da RAM depois de 60min
+  sem uso, devolvendo a memória pros outros serviços do cluster.
+  Custa alguns segundos de recarga na primeira mensagem depois de um
+  período ocioso - ajuste esse valor se incomodar.
+- `requests`: 500m CPU / 3Gi RAM - o mínimo estimado pra manter os dois
+  modelos residentes (3B + embeddings) com folga de KV cache. `limits`:
+  2 CPU / 5Gi RAM, só como teto de segurança, não reserva de verdade.
+  Esses números são uma estimativa inicial - se notar OOM ou lentidão,
+  ajuste pra cima.
 - Imagem do `ollama` fixada em `0.3.14` em vez de `latest`, para não
   atualizar sozinha sem você perceber.
 

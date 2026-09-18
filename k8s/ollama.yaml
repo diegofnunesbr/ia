@@ -17,11 +17,6 @@ metadata:
   namespace: ia
 spec:
   replicas: 1
-  # Default RollingUpdate tries to bring the new pod up before tearing
-  # down the old one - with only one replica and requests this large
-  # (10Gi RAM), the node doesn't have room for both at once and the
-  # rollout gets stuck Pending forever ("Insufficient memory"), silently
-  # leaving the old pod running. Recreate kills the old one first.
   strategy:
     type: Recreate
   selector:
@@ -38,39 +33,22 @@ spec:
           ports:
             - containerPort: 11434
           env:
-            # Single user, one request at a time - avoids spawning extra
-            # parallel model contexts that would multiply RAM usage.
             - name: OLLAMA_NUM_PARALLEL
               value: "1"
-            # Keep both models (chat + embeddings) resident so switching
-            # between them on every message doesn't force a reload from
-            # disk each time.
             - name: OLLAMA_MAX_LOADED_MODELS
               value: "2"
-            # -1 = never unload. VM has 16GB now, plenty of room to keep
-            # the ~5-6GB model resident permanently and avoid the ~1min
-            # reload-from-disk delay on the first message after idling.
             - name: OLLAMA_KEEP_ALIVE
-              value: "-1"
+              value: "60m"
           volumeMounts:
             - name: models
               mountPath: /root/.ollama
           resources:
             requests:
-              cpu: "1"
-              # qwen2.5:7b-instruct needs ~5-6Gi loaded - 7Gi requested
-              # for margin (owner's preference), under the 10Gi limit.
-              memory: 7Gi
+              cpu: 500m
+              memory: 3Gi
             limits:
-              # VM is dedicated to this project (owner's call) and going
-              # to 8 cores - lets prefill (processing large, never-cached
-              # tool results) use the full VM, even though pure decode
-              # won't benefit past ~6. A limit isn't a reservation, so
-              # this doesn't starve the other pods' small CPU requests.
-              cpu: "8"
-              # VM has 12GB total, dedicated to this project alone - 10Gi
-              # leaves ~2GB for the OS/kubelet/other pods (owner's call).
-              memory: 10Gi
+              cpu: "2"
+              memory: 5Gi
           readinessProbe:
             tcpSocket:
               port: 11434
