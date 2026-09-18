@@ -59,7 +59,7 @@ const LEADING_CONTEXT_TAGS = /^(\[[^\]]*\]\n\n)+/
 export async function getConversationForDisplay(sessionId) {
   const { rows } = await pool.query(
     `SELECT role, content FROM chat_messages
-     WHERE session_id = $1 AND role IN ('user', 'assistant') AND content IS NOT NULL
+     WHERE session_id = $1 AND role IN ('user', 'assistant') AND content IS NOT NULL AND content <> ''
      ORDER BY id ASC`,
     [sessionId]
   )
