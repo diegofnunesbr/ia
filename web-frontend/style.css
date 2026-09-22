@@ -21,7 +21,8 @@ body {
    render stacked on top of each other instead of one replacing the
    other. */
 .app[hidden],
-.login-screen[hidden] {
+.login-screen[hidden],
+.login-card[hidden] {
   display: none;
 }
 
