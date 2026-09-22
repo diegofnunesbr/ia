@@ -7,21 +7,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="loginScreen" class="login-screen" hidden>
-    <form id="loginForm" class="login-card">
-      <h1>IA</h1>
-      <input id="loginUsername" type="text" placeholder="Usuário" autocomplete="username" required />
-      <input id="loginPassword" type="password" placeholder="Senha" autocomplete="current-password" required />
-      <input id="loginTotp" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Código do autenticador" autocomplete="one-time-code" required />
-      <button type="submit">Entrar</button>
-      <p id="loginError" class="login-error" hidden></p>
-    </form>
-  </div>
-  <div id="app" class="app" hidden>
+  <div id="app" class="app">
     <aside id="sidebar" class="sidebar">
       <button id="newChat" class="new-chat-btn">+ Nova conversa</button>
       <div id="sessionList" class="session-list"></div>
-      <button type="button" id="logoutBtn" class="logout-btn">Desconectar</button>
+      <a id="logoutBtn" class="logout-btn" href="https://auth.ia.diegofnunesbr.com/logout?rd=https://ia.diegofnunesbr.com/">Desconectar</a>
     </aside>
     <main class="chat">
       <button type="button" id="menuToggle" class="menu-toggle" aria-label="Conversas">☰</button>

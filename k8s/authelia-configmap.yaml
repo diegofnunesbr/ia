@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authelia-config
+  namespace: ia
+data:
+  configuration.yml: |
+    server:
+      address: 'tcp://0.0.0.0:9091'
+
+    log:
+      level: info
+
+    authentication_backend:
+      file:
+        path: /secrets/users_database.yml
+
+    access_control:
+      default_policy: deny
+      rules:
+        - domain: 'ia.diegofnunesbr.com'
+          policy: two_factor
+
+    session:
+      cookies:
+        - domain: 'ia.diegofnunesbr.com'
+          authelia_url: 'https://auth.ia.diegofnunesbr.com'
+          # Home LAN, single user - no need to re-auth constantly.
+          # expiration/inactivity control the plain session; remember_me
+          # is the separate, much longer "lembrar-me" checkbox on login.
+          expiration: '12h'
+          inactivity: '1h'
+          remember_me: '30d'
+
+    storage:
+      local:
+        path: /data/db.sqlite3
+
+    notifier:
+      filesystem:
+        filename: /data/notification.txt
+
+    totp:
+      issuer: 'ia.diegofnunesbr.com'

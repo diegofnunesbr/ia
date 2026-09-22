@@ -3,15 +3,16 @@
 App de chat (texto + voz) acessível via `https://ia.diegofnunesbr.com`,
 100% local: o LLM roda no seu próprio cluster via Ollama, sem nenhuma
 chamada para a internet - por isso é seguro colocar senhas/dados
-sensíveis na conversa. Login + 2FA (senha + código TOTP) são feitos
-direto no `agent-backend` (ver `agent-backend/auth.js`). Já tem upload
-de documento/imagem com OCR local; smart home, câmeras e impressoras
-ainda não estão conectadas.
+sensíveis na conversa. Login + 2FA (senha + TOTP com QR code) são
+feitos pelo Authelia (`k8s/authelia.yaml`), na frente de tudo via
+Ingress (`auth-url`/`auth-signin`) - o `agent-backend` não faz auth
+própria. Já tem upload de documento/imagem com OCR local; smart home,
+câmeras e impressoras ainda não estão conectadas.
 
 Antes do deploy, troque `OWNER_NAME` em `k8s/agent-backend.yaml` pelo
 seu nome/apelido (é o que o assistente usa para se referir a você),
-e as credenciais de login em `k8s/secrets.local.yaml` (ver seção
-Secrets) pelas suas.
+e os dados do seu usuário em `k8s/secrets.local.yaml` (ver seção
+Secrets) pelos seus.
 
 ## Serviços
 
@@ -86,29 +87,34 @@ coberto pelo `.gitignore`) e edite essa cópia:
 cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 ```
 
-1. Gere o hash da sua senha de login e o segredo do TOTP (rode dentro
-   do pod, ele já tem `bcryptjs`/`otplib` instalados):
+1. Gere os três segredos aleatórios do Authelia:
    ```bash
-   kubectl exec -n ia deploy/agent-backend -- node -e \
-     "console.log(require('bcryptjs').hashSync('sua-senha', 10))"
-   kubectl exec -n ia deploy/agent-backend -- node -e \
-     "console.log(require('otplib').authenticator.generateSecret())"
+   openssl rand -hex 32   # JWT_SECRET
+   openssl rand -hex 32   # SESSION_SECRET
+   openssl rand -hex 32   # STORAGE_ENCRYPTION_KEY
    ```
-   Adicione o segredo TOTP no seu app autenticador via **entrada
-   manual** (não precisa de QR code - todo app TOTP aceita digitar o
-   segredo base32 direto).
-2. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
-   `agent-backend-auth-secrets` e `postgres-secrets`) e sele com
-   `kubeseal --scope cluster-wide --controller-name sealed-secrets
+2. Gere o hash argon2 da sua senha de login (usa a própria imagem do
+   Authelia, não precisa estar com nada rodando ainda):
+   ```bash
+   docker run --rm authelia/authelia:4.38 authelia crypto hash generate argon2 --password 'sua-senha'
+   ```
+   Preencha o campo `password` do usuário em `authelia-users` (dentro
+   de `users_database.yml`) com o hash gerado.
+3. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
+   `authelia-secrets`, `authelia-users` e `postgres-secrets`) e sele
+   com `kubeseal --scope cluster-wide --controller-name sealed-secrets
    --controller-namespace kube-system` (sem newline espúrio via
    `printf '%s'`), como de costume. Depois de selado, o `.yaml` selado
    (sem dado sensível em texto puro) pode ir pro git normalmente.
+4. O QR code do TOTP aparece no próprio Authelia, no primeiro login em
+   `https://auth.ia.diegofnunesbr.com` - não precisa configurar nada
+   manualmente, só escanear com seu app autenticador.
 
 ## Pré-requisitos
 
 - `ingress-nginx` e `cert-manager` instalados (repositórios `argocd` e
-  `cert-manager`) e DNS `ia.diegofnunesbr.com` apontando pro node
-  (repositório `dns`)
+  `cert-manager`) e DNS `ia.diegofnunesbr.com` **e**
+  `auth.ia.diegofnunesbr.com` apontando pro node (repositório `dns`)
 
 ## Deploy
 
@@ -116,6 +122,9 @@ cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/network-policy.yaml
 kubectl apply -f k8s/network-policy-ingress.yaml
+kubectl apply -f k8s/secrets.local.yaml
+kubectl apply -f k8s/authelia-configmap.yaml
+kubectl apply -f k8s/authelia.yaml
 kubectl apply -f k8s/postgres.yaml
 kubectl apply -f k8s/ollama.yaml
 kubectl apply -f k8s/agent-backend.yaml
@@ -149,12 +158,14 @@ nada saia para a internet.
   cluster/rede conseguia chamar essas rotas direto, pulando o login.
   Ajuste o label `kubernetes.io/metadata.name: ingress-nginx` nesse
   arquivo se o seu namespace do ingress-nginx tiver outro nome.
-- **Login + 2FA obrigatório**: senha (hash bcrypt) e código TOTP são
-  checados em `agent-backend/auth.js`, gate próprio (sem depender de
-  Authelia/SSO externo). Hash e segredo TOTP ficam em Secret
-  (`agent-backend-auth-secrets`), nunca em texto puro no código -
-  compensação necessária por sair de "só rede local" pra um domínio
-  público (`ia.diegofnunesbr.com`) resolvendo pro mesmo IP privado.
+- **Login + 2FA obrigatório**: Authelia (`k8s/authelia.yaml`) fica na
+  frente de `ia.diegofnunesbr.com` via forward-auth do ingress-nginx
+  (`auth-url`/`auth-signin`) - nenhuma requisição chega no
+  `web-frontend`/`agent-backend` sem passar por senha + TOTP antes.
+  Hash da senha (argon2) e segredos ficam em Secret (`authelia-users`,
+  `authelia-secrets`), nunca em texto puro no código - compensação
+  necessária por sair de "só rede local" pra um domínio público
+  (`ia.diegofnunesbr.com`) resolvendo pro mesmo IP privado.
 
 ## Hardware
 
