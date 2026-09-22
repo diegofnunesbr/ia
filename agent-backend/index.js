@@ -165,11 +165,11 @@ app.use(express.json())
 app.get('/health', (_req, res) => res.json({ ok: true }))
 
 app.post('/login', (req, res) => {
-  const { username, password } = req.body || {}
-  if (!username || !password) {
-    return res.status(400).json({ error: 'username e password são obrigatórios' })
+  const { username, password, totp } = req.body || {}
+  if (!username || !password || !totp) {
+    return res.status(400).json({ error: 'username, password e totp são obrigatórios' })
   }
-  if (!verifyCredentials(username, password)) {
+  if (!verifyCredentials(username, password, totp)) {
     return res.status(401).json({ error: 'credenciais inválidas' })
   }
   setSessionCookie(res, createSession())

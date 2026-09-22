@@ -1,13 +1,11 @@
 # ia
 
-App de chat (texto + voz) acessível na rede interna, 100% local: o
-LLM roda no seu próprio cluster via Ollama, sem nenhuma chamada para a
-internet - por isso é seguro colocar senhas/dados sensíveis na
-conversa. Login (usuário + senha) é feito direto no `agent-backend`
-(ver `agent-backend/auth.js`) - acessível via HTTP puro por IP, sem
-precisar de domínio nem certificado (2FA pode ser adicionado depois,
-deixado de fora por enquanto pra manter simples). Já tem upload de
-documento/imagem com OCR local; smart home, câmeras e impressoras
+App de chat (texto + voz) acessível via `https://ia.diegofnunesbr.com`,
+100% local: o LLM roda no seu próprio cluster via Ollama, sem nenhuma
+chamada para a internet - por isso é seguro colocar senhas/dados
+sensíveis na conversa. Login + 2FA (senha + código TOTP) são feitos
+direto no `agent-backend` (ver `agent-backend/auth.js`). Já tem upload
+de documento/imagem com OCR local; smart home, câmeras e impressoras
 ainda não estão conectadas.
 
 Antes do deploy, troque `OWNER_NAME` em `k8s/agent-backend.yaml` pelo
@@ -88,17 +86,29 @@ coberto pelo `.gitignore`) e edite essa cópia:
 cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 ```
 
-1. Gere o hash da sua senha de login (rode dentro do pod, ele já tem
-   `bcryptjs` instalado):
+1. Gere o hash da sua senha de login e o segredo do TOTP (rode dentro
+   do pod, ele já tem `bcryptjs`/`otplib` instalados):
    ```bash
    kubectl exec -n ia deploy/agent-backend -- node -e \
      "console.log(require('bcryptjs').hashSync('sua-senha', 10))"
+   kubectl exec -n ia deploy/agent-backend -- node -e \
+     "console.log(require('otplib').authenticator.generateSecret())"
    ```
+   Adicione o segredo TOTP no seu app autenticador via **entrada
+   manual** (não precisa de QR code - todo app TOTP aceita digitar o
+   segredo base32 direto).
 2. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
-   `agent-backend-auth-secrets` e `postgres-secrets`) e sele com kubeseal (`--scope cluster-wide`,
-   sem newline espúrio via `printf '%s'`), como de costume. Depois de
-   selado, o `.yaml` selado (sem dado sensível em texto puro) pode ir
-   pro git normalmente.
+   `agent-backend-auth-secrets` e `postgres-secrets`) e sele com
+   `kubeseal --scope cluster-wide --controller-name sealed-secrets
+   --controller-namespace kube-system` (sem newline espúrio via
+   `printf '%s'`), como de costume. Depois de selado, o `.yaml` selado
+   (sem dado sensível em texto puro) pode ir pro git normalmente.
+
+## Pré-requisitos
+
+- `ingress-nginx` e `cert-manager` instalados (repositórios `argocd` e
+  `cert-manager`) e DNS `ia.diegofnunesbr.com` apontando pro node
+  (repositório `dns`)
 
 ## Deploy
 
@@ -110,7 +120,6 @@ kubectl apply -f k8s/postgres.yaml
 kubectl apply -f k8s/ollama.yaml
 kubectl apply -f k8s/agent-backend.yaml
 kubectl apply -f k8s/web-frontend.yaml
-kubectl apply -f k8s/web-frontend-ingress-allow.yaml
 ```
 
 ## Documentos e imagens no chat (OCR local)
@@ -124,9 +133,8 @@ Limitações: PDF escaneado sem camada de texto (só imagem dentro do
 PDF) não é lido ainda; e o OCR está configurado para português
 (`OCR_LANG=por`).
 
-Acesse direto pelo IP do node, HTTP puro (ex.: `http://192.168.0.4:30277/`)
-- `web-frontend` é exposto via NodePort simples, sem ingress-nginx/TLS
-nem domínio.
+Acesse via `https://ia.diegofnunesbr.com` - certificado real (Let's
+Encrypt, renovado automaticamente pelo cert-manager).
 
 `k8s/network-policy.yaml` bloqueia todo egress externo do namespace
 (só permite DNS e tráfego entre pods do cluster) - é o que garante que
@@ -141,12 +149,12 @@ nada saia para a internet.
   cluster/rede conseguia chamar essas rotas direto, pulando o login.
   Ajuste o label `kubernetes.io/metadata.name: ingress-nginx` nesse
   arquivo se o seu namespace do ingress-nginx tiver outro nome.
-- **Login obrigatório**: senha (hash bcrypt) checada em
-  `agent-backend/auth.js`, gate próprio (sem depender de Authelia/SSO
-  externo) - funciona por IP puro, sem domínio nem certificado. Hash
-  fica em Secret (`agent-backend-auth-secrets`), nunca em texto puro
-  no código. Sem 2FA por enquanto (rede local confiável) - fica como
-  possível melhoria futura.
+- **Login + 2FA obrigatório**: senha (hash bcrypt) e código TOTP são
+  checados em `agent-backend/auth.js`, gate próprio (sem depender de
+  Authelia/SSO externo). Hash e segredo TOTP ficam em Secret
+  (`agent-backend-auth-secrets`), nunca em texto puro no código -
+  compensação necessária por sair de "só rede local" pra um domínio
+  público (`ia.diegofnunesbr.com`) resolvendo pro mesmo IP privado.
 
 ## Hardware
 

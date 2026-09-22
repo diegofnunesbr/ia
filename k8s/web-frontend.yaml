@@ -28,18 +28,48 @@ spec:
               memory: 128Mi
 
 ---
-# Plain HTTP, exposed directly via NodePort - no ingress-nginx/TLS/domain
-# needed. Login/2FA live in agent-backend itself (see auth.js).
 apiVersion: v1
 kind: Service
 metadata:
   name: web-frontend
   namespace: ia
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: web-frontend
   ports:
     - port: 80
       targetPort: 80
-      nodePort: 30277
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-frontend
+  namespace: ia
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-clusterissuer
+    # Login/2FA live in agent-backend itself (see auth.js) - no Authelia
+    # auth-url/auth-signin subrequest here.
+    # Same reasoning as web-frontend/nginx.conf: CPU inference can take
+    # well past the 60s default before agent-backend replies.
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ia.diegofnunesbr.com
+      secretName: ia-tls
+  rules:
+    - host: ia.diegofnunesbr.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-frontend
+                port:
+                  number: 80

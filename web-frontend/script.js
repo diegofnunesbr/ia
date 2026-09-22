@@ -2,6 +2,7 @@ const loginScreen = document.getElementById('loginScreen')
 const loginForm = document.getElementById('loginForm')
 const loginUsername = document.getElementById('loginUsername')
 const loginPassword = document.getElementById('loginPassword')
+const loginTotp = document.getElementById('loginTotp')
 const loginError = document.getElementById('loginError')
 const appEl = document.getElementById('app')
 const logoutBtn = document.getElementById('logoutBtn')
@@ -472,6 +473,7 @@ loginForm.addEventListener('submit', async (e) => {
       body: JSON.stringify({
         username: loginUsername.value,
         password: loginPassword.value,
+        totp: loginTotp.value,
       }),
     })
     if (!res.ok) {
@@ -481,6 +483,7 @@ loginForm.addEventListener('submit', async (e) => {
       return
     }
     loginPassword.value = ''
+    loginTotp.value = ''
     showApp()
     await initApp()
   } catch (err) {
