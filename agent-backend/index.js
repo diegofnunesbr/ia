@@ -5,6 +5,21 @@ import { chat } from './llm.js'
 import { initMemory, rememberFact, recallRelevant } from './memory.js'
 import { extractText, imageToPdf } from './documents.js'
 import {
+  verifyPassword,
+  createPendingTotp,
+  verifyTotp,
+  createSession,
+  destroySession,
+  isValidSession,
+  requireAuth,
+  setSessionCookie,
+  clearSessionCookie,
+  setPendingTotpCookie,
+  clearPendingTotpCookie,
+  getSessionToken,
+  getPendingTotpToken,
+} from './auth.js'
+import {
   initSessions,
   ensureSession,
   listSessions,
@@ -153,6 +168,46 @@ const app = express()
 app.use(express.json())
 
 app.get('/health', (_req, res) => res.json({ ok: true }))
+
+app.post('/login', (req, res) => {
+  const { username, password } = req.body || {}
+  if (!username || !password) {
+    return res.status(400).json({ error: 'username e password são obrigatórios' })
+  }
+  if (!verifyPassword(username, password)) {
+    return res.status(401).json({ error: 'credenciais inválidas' })
+  }
+  setPendingTotpCookie(res, createPendingTotp())
+  res.json({ ok: true })
+})
+
+app.post('/login/totp', (req, res) => {
+  const { totp } = req.body || {}
+  const pendingToken = getPendingTotpToken(req)
+  if (!pendingToken || !totp) {
+    return res.status(400).json({ error: 'totp é obrigatório' })
+  }
+  if (!verifyTotp(pendingToken, totp)) {
+    return res.status(401).json({ error: 'código inválido' })
+  }
+  clearPendingTotpCookie(res)
+  setSessionCookie(res, createSession())
+  res.json({ ok: true })
+})
+
+app.get('/me', (req, res) => {
+  const token = getSessionToken(req)
+  res.json({ authenticated: Boolean(token) && isValidSession(token) })
+})
+
+app.post('/logout', (req, res) => {
+  const token = getSessionToken(req)
+  if (token) destroySession(token)
+  clearSessionCookie(res)
+  res.json({ ok: true })
+})
+
+app.use(requireAuth)
 
 async function buildUserContent(from, text) {
   let userContent = `[Data/hora atual: ${currentDateTime()}]\n\n${text}`

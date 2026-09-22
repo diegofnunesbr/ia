@@ -39,6 +39,21 @@ spec:
                   key: password
             - name: DATABASE_URL
               value: postgresql://assistant:$(POSTGRES_PASSWORD)@postgres:5432/assistant
+            - name: AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-auth-secrets
+                  key: username
+            - name: AUTH_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-auth-secrets
+                  key: password-hash
+            - name: AUTH_TOTP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-auth-secrets
+                  key: totp-secret
           resources:
             requests:
               cpu: 200m
