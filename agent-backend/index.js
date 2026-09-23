@@ -5,19 +5,14 @@ import { chat } from './llm.js'
 import { initMemory, rememberFact, recallRelevant } from './memory.js'
 import { extractText, imageToPdf } from './documents.js'
 import {
-  verifyPassword,
-  createPendingTotp,
-  verifyTotp,
+  verifyCredentials,
   createSession,
   destroySession,
   isValidSession,
   requireAuth,
   setSessionCookie,
   clearSessionCookie,
-  setPendingTotpCookie,
-  clearPendingTotpCookie,
   getSessionToken,
-  getPendingTotpToken,
 } from './auth.js'
 import {
   initSessions,
@@ -174,23 +169,9 @@ app.post('/login', (req, res) => {
   if (!username || !password) {
     return res.status(400).json({ error: 'username e password são obrigatórios' })
   }
-  if (!verifyPassword(username, password)) {
+  if (!verifyCredentials(username, password)) {
     return res.status(401).json({ error: 'credenciais inválidas' })
   }
-  setPendingTotpCookie(res, createPendingTotp())
-  res.json({ ok: true })
-})
-
-app.post('/login/totp', (req, res) => {
-  const { totp } = req.body || {}
-  const pendingToken = getPendingTotpToken(req)
-  if (!pendingToken || !totp) {
-    return res.status(400).json({ error: 'totp é obrigatório' })
-  }
-  if (!verifyTotp(pendingToken, totp)) {
-    return res.status(401).json({ error: 'código inválido' })
-  }
-  clearPendingTotpCookie(res)
   setSessionCookie(res, createSession())
   res.json({ ok: true })
 })

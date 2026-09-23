@@ -18,7 +18,6 @@ CERT=$(mktemp)
 trap 'rm -f "$CERT"' EXIT
 ssh "$NODE" "kubeseal --fetch-cert --controller-name sealed-secrets --controller-namespace kube-system" > "$CERT"
 USERNAME_B64=$(ssh "$NODE" "$KCTL -n ia get secret agent-backend-auth-secrets -o jsonpath='{.data.username}'")
-TOTP_B64=$(ssh "$NODE" "$KCTL -n ia get secret agent-backend-auth-secrets -o jsonpath='{.data.totp-secret}'")
 
 cat <<EOF | kubeseal --cert "$CERT" --scope cluster-wide --format yaml > "$SEALED"
 apiVersion: v1
@@ -30,7 +29,6 @@ type: Opaque
 data:
   username: $USERNAME_B64
   password-hash: $(printf '%s' "$HASH" | base64 -w0)
-  totp-secret: $TOTP_B64
 EOF
 
 git add "$SEALED"
@@ -49,4 +47,4 @@ done
 
 sleep 5
 ssh "$NODE" "$KCTL -n ia rollout restart deployment/agent-backend && $KCTL -n ia rollout status deployment/agent-backend --timeout=300s"
-echo "Pronto. O código TOTP continua o mesmo; só a senha mudou."
+echo "Pronto. Login em https://ia.diegofnunesbr.com"

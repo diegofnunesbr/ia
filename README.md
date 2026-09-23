@@ -3,9 +3,9 @@
 App de chat (texto + voz) acessível via `https://ia.diegofnunesbr.com`,
 100% local: o LLM roda no seu próprio cluster via Ollama, sem nenhuma
 chamada para a internet - por isso é seguro colocar senhas/dados
-sensíveis na conversa. Login em duas telas (senha, depois código TOTP,
-estilo Proxmox) é feito direto no `agent-backend` (ver
-`agent-backend/auth.js`), sem depender de subdomínio/SSO externo. Já
+sensíveis na conversa. Login com usuário e senha é feito direto no
+`agent-backend` (ver `agent-backend/auth.js`), sem depender de
+subdomínio/SSO externo. Já
 tem upload de documento/imagem com OCR local; smart home, câmeras e
 impressoras ainda não estão conectadas.
 
@@ -87,21 +87,16 @@ coberto pelo `.gitignore`) e edite essa cópia:
 cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 ```
 
-1. Gere o hash da sua senha de login e o segredo do TOTP usando a
-   própria imagem do `agent-backend` (já tem `bcryptjs`/`otplib`; roda
-   antes do deploy, não depende do pod existir). `read -s` evita a senha
-   ecoar ou ficar no histórico do shell:
+1. Gere o hash da sua senha de login usando a própria imagem do
+   `agent-backend` (já tem `bcryptjs`; roda antes do deploy, não depende
+   do pod existir). `read -s` evita a senha ecoar ou ficar no histórico
+   do shell:
    ```bash
    docker run --rm -it ia/agent-backend:latest sh -c '
      read -s -p "Senha: " PW; echo
      PW="$PW" node -e "console.log(require(\"bcryptjs\").hashSync(process.env.PW, 10))"
    '
-   docker run --rm ia/agent-backend:latest node -e \
-     "console.log(require('otplib').authenticator.generateSecret())"
    ```
-   Adicione o segredo TOTP no seu app autenticador via **entrada
-   manual** (não precisa de QR code - todo app TOTP aceita digitar o
-   segredo base32 direto).
 2. Preencha `k8s/secrets.local.yaml` com os valores reais e sele cada
    Secret no seu próprio arquivo (`k8s/<nome>.sealed.yaml`, esses vão pro
    git, é de lá que o Argo CD aplica). Separe os dois documentos do
@@ -123,16 +118,15 @@ Rode daqui do seu clone (precisa de `htpasswd`, `kubeseal` e `ssh` pra
 ```
 
 Pede a senha sem ecoar, gera o hash, re-sela
-`k8s/agent-backend-auth-secrets.sealed.yaml` mantendo o usuário e o
-segredo TOTP atuais, faz commit + push, espera o Argo CD sincronizar e
-reinicia o `agent-backend` (sessões abertas são deslogadas). O código do
-autenticador continua o mesmo.
+`k8s/agent-backend-auth-secrets.sealed.yaml` mantendo o usuário atual,
+faz commit + push, espera o Argo CD sincronizar e reinicia o
+`agent-backend` (sessões abertas são deslogadas).
 
 ## Pré-requisitos
 
 - ArgoCD instalado (repositório `argocd`), com o Sealed Secrets do
   `core-config`
-- `ingress-nginx` e `cert-manager` instalados (repositórios `argocd` e
+- `ingress-nginx` e `cert-manager` instalados (repositórios `ingress-nginx` e
   `cert-manager`) e DNS `ia.diegofnunesbr.com` apontando pro node
   (repositório `dns`)
 - Imagens `ia/agent-backend:latest` e `ia/web-frontend:latest` já
@@ -178,10 +172,10 @@ nada saia para a internet.
   cluster/rede conseguia chamar essas rotas direto, pulando o login.
   Ajuste o label `kubernetes.io/metadata.name: ingress-nginx` nesse
   arquivo se o seu namespace do ingress-nginx tiver outro nome.
-- **Login + 2FA obrigatório**: senha e código TOTP (em telas
-  separadas) são checados em `agent-backend/auth.js`, gate próprio
-  (sem depender de Authelia/SSO externo nem de um subdomínio à parte).
-  Hash e segredo TOTP ficam em Secret (`agent-backend-auth-secrets`),
+- **Login obrigatório**: usuário e senha são checados em
+  `agent-backend/auth.js`, gate próprio (sem depender de Authelia/SSO
+  externo nem de um subdomínio à parte). O hash da senha fica em Secret
+  (`agent-backend-auth-secrets`),
   nunca em texto puro no código - compensação necessária por sair de
   "só rede local" pra um domínio público (`ia.diegofnunesbr.com`)
   resolvendo pro mesmo IP privado.

@@ -3,9 +3,6 @@ const loginForm = document.getElementById('loginForm')
 const loginUsername = document.getElementById('loginUsername')
 const loginPassword = document.getElementById('loginPassword')
 const loginError = document.getElementById('loginError')
-const totpForm = document.getElementById('totpForm')
-const loginTotp = document.getElementById('loginTotp')
-const totpError = document.getElementById('totpError')
 const appEl = document.getElementById('app')
 const logoutBtn = document.getElementById('logoutBtn')
 
@@ -458,8 +455,6 @@ async function initApp() {
 function showLogin() {
   loginScreen.hidden = false
   appEl.hidden = true
-  loginForm.hidden = false
-  totpForm.hidden = true
 }
 
 function showApp() {
@@ -483,37 +478,11 @@ loginForm.addEventListener('submit', async (e) => {
       return
     }
     loginPassword.value = ''
-    loginForm.hidden = true
-    totpForm.hidden = false
-    loginTotp.focus()
-  } catch (err) {
-    loginError.textContent = 'Erro ao falar com o servidor.'
-    loginError.hidden = false
-    console.error(err)
-  }
-})
-
-totpForm.addEventListener('submit', async (e) => {
-  e.preventDefault()
-  totpError.hidden = true
-  try {
-    const res = await fetch('/api/login/totp', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ totp: loginTotp.value }),
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      totpError.textContent = data.error || 'Falha ao entrar.'
-      totpError.hidden = false
-      return
-    }
-    loginTotp.value = ''
     showApp()
     await initApp()
   } catch (err) {
-    totpError.textContent = 'Erro ao falar com o servidor.'
-    totpError.hidden = false
+    loginError.textContent = 'Erro ao falar com o servidor.'
+    loginError.hidden = false
     console.error(err)
   }
 })
