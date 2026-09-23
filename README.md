@@ -110,8 +110,9 @@ cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 
 ### Trocar só a senha de login
 
-Rode daqui do seu clone (precisa de `htpasswd`, `kubeseal` e `ssh` pra
-`vm-ubuntu`):
+Rode daqui do seu clone (precisa de `htpasswd`, `kubeseal` e do contexto
+`k0s`, ver README do repositório `argocd`, seção "Acessar o cluster de
+fora da VM"):
 
 ```bash
 ./change-password.sh

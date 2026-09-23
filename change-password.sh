@@ -2,9 +2,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-NODE="${NODE:-diegofnunesbr@192.168.0.4}"
-KCTL="kubectl --context=Default"
+CTX="${KUBE_CONTEXT:-k0s}"
+K="kubectl --context=$CTX"
 SEALED=k8s/agent-backend-auth-secrets.sealed.yaml
+USERNAME_B64=$($K -n ia get secret agent-backend-auth-secrets -o jsonpath='{.data.username}') \
+  || { echo "Sem acesso ao ia pelo contexto '$CTX' (ver README do repositório argocd, seção do kubeconfig)."; exit 1; }
 
 read -rsp "Nova senha de login do ia: " PW; echo
 read -rsp "Confirme a senha: " PW2; echo
@@ -14,12 +16,8 @@ HASH=$(printf '%s' "$PW" | htpasswd -niBC 10 "" | tr -d ':\n' | sed 's/^\$2y/\$2
 
 git pull --ff-only
 
-CERT=$(mktemp)
-trap 'rm -f "$CERT"' EXIT
-ssh "$NODE" "kubeseal --fetch-cert --controller-name sealed-secrets --controller-namespace kube-system" > "$CERT"
-USERNAME_B64=$(ssh "$NODE" "$KCTL -n ia get secret agent-backend-auth-secrets -o jsonpath='{.data.username}'")
-
-cat <<EOF | kubeseal --cert "$CERT" --scope cluster-wide --format yaml > "$SEALED"
+cat <<EOF | kubeseal --context "$CTX" --controller-name sealed-secrets --controller-namespace kube-system \
+  --scope cluster-wide --format yaml > "$SEALED"
 apiVersion: v1
 kind: Secret
 metadata:
@@ -36,15 +34,17 @@ git commit -m "rotate ia login password"
 git push
 
 REV=$(git rev-parse HEAD)
-ssh "$NODE" "$KCTL -n argocd annotate application ia argocd.argoproj.io/refresh=hard --overwrite" >/dev/null
+$K -n argocd annotate application ia argocd.argoproj.io/refresh=hard --overwrite >/dev/null
 echo "Aguardando o Argo CD sincronizar $REV..."
+STATUS=""
 for _ in $(seq 1 60); do
-  STATUS=$(ssh "$NODE" "$KCTL -n argocd get application ia -o jsonpath='{.status.sync.status} {.status.sync.revision}'")
+  STATUS=$($K -n argocd get application ia -o jsonpath='{.status.sync.status} {.status.sync.revision}')
   [[ "$STATUS" == "Synced $REV" ]] && break
   sleep 5
 done
 [[ "$STATUS" == "Synced $REV" ]] || { echo "Timeout esperando o sync. Rode o restart manualmente depois."; exit 1; }
 
 sleep 5
-ssh "$NODE" "$KCTL -n ia rollout restart deployment/agent-backend && $KCTL -n ia rollout status deployment/agent-backend --timeout=300s"
+$K -n ia rollout restart deployment/agent-backend
+$K -n ia rollout status deployment/agent-backend --timeout=300s
 echo "Pronto. Login em https://ia.diegofnunesbr.com"
