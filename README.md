@@ -102,18 +102,31 @@ cp k8s/secrets.example.yaml k8s/secrets.local.yaml
    Adicione o segredo TOTP no seu app autenticador via **entrada
    manual** (não precisa de QR code - todo app TOTP aceita digitar o
    segredo base32 direto).
-2. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
-   `agent-backend-auth-secrets` e `postgres-secrets`), sele cada Secret
-   e junte tudo em `k8s/secrets.sealed.yaml` (esse vai pro git, é de lá
-   que o Argo CD aplica):
+2. Preencha `k8s/secrets.local.yaml` com os valores reais e sele cada
+   Secret no seu próprio arquivo (`k8s/<nome>.sealed.yaml`, esses vão pro
+   git, é de lá que o Argo CD aplica). Separe os dois documentos do
+   `secrets.local.yaml` e rode, pra cada um:
    ```bash
    kubeseal --scope cluster-wide --controller-name sealed-secrets \
      --controller-namespace kube-system --format yaml \
-     < k8s/secrets.local.yaml > k8s/secrets.sealed.yaml
-   git add k8s/secrets.sealed.yaml && git commit -m "rotate ia secrets" && git push
+     < secret-do-agent-backend.yaml > k8s/agent-backend-auth-secrets.sealed.yaml
    ```
-   Se o `kubeseal` só selar o primeiro documento do arquivo, sele um
-   Secret por vez e junte os resultados separados por `---`.
+   Depois `git add k8s/*.sealed.yaml && git commit && git push`.
+
+### Trocar só a senha de login
+
+Rode daqui do seu clone (precisa de `htpasswd`, `kubeseal` e `ssh` pra
+`vm-ubuntu`):
+
+```bash
+./change-password.sh
+```
+
+Pede a senha sem ecoar, gera o hash, re-sela
+`k8s/agent-backend-auth-secrets.sealed.yaml` mantendo o usuário e o
+segredo TOTP atuais, faz commit + push, espera o Argo CD sincronizar e
+reinicia o `agent-backend` (sessões abertas são deslogadas). O código do
+autenticador continua o mesmo.
 
 ## Pré-requisitos
 
