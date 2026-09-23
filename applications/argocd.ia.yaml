@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ia
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/diegofnunesbr/ia.git
+    targetRevision: main
+    path: k8s
+    directory:
+      exclude: secrets.example.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ia
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

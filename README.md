@@ -87,44 +87,56 @@ coberto pelo `.gitignore`) e edite essa cópia:
 cp k8s/secrets.example.yaml k8s/secrets.local.yaml
 ```
 
-1. Gere o hash da sua senha de login e o segredo do TOTP (rode dentro
-   do pod, ele já tem `bcryptjs`/`otplib` instalados). Usa `read -s`
-   pra senha não ecoar nem ficar no histórico do shell:
+1. Gere o hash da sua senha de login e o segredo do TOTP usando a
+   própria imagem do `agent-backend` (já tem `bcryptjs`/`otplib`; roda
+   antes do deploy, não depende do pod existir). `read -s` evita a senha
+   ecoar ou ficar no histórico do shell:
    ```bash
-   kubectl exec -it -n ia deploy/agent-backend -- sh -c '
+   docker run --rm -it ia/agent-backend:latest sh -c '
      read -s -p "Senha: " PW; echo
      PW="$PW" node -e "console.log(require(\"bcryptjs\").hashSync(process.env.PW, 10))"
    '
-   kubectl exec -n ia deploy/agent-backend -- node -e \
+   docker run --rm ia/agent-backend:latest node -e \
      "console.log(require('otplib').authenticator.generateSecret())"
    ```
    Adicione o segredo TOTP no seu app autenticador via **entrada
    manual** (não precisa de QR code - todo app TOTP aceita digitar o
    segredo base32 direto).
 2. Preencha `k8s/secrets.local.yaml` com os valores reais (inclui
-   `agent-backend-auth-secrets` e `postgres-secrets`) e sele com
-   `kubeseal --scope cluster-wide --controller-name sealed-secrets
-   --controller-namespace kube-system` (sem newline espúrio via
-   `printf '%s'`), como de costume. Depois de selado, o `.yaml` selado
-   (sem dado sensível em texto puro) pode ir pro git normalmente.
+   `agent-backend-auth-secrets` e `postgres-secrets`), sele cada Secret
+   e junte tudo em `k8s/secrets.sealed.yaml` (esse vai pro git, é de lá
+   que o Argo CD aplica):
+   ```bash
+   kubeseal --scope cluster-wide --controller-name sealed-secrets \
+     --controller-namespace kube-system --format yaml \
+     < k8s/secrets.local.yaml > k8s/secrets.sealed.yaml
+   git add k8s/secrets.sealed.yaml && git commit -m "rotate ia secrets" && git push
+   ```
+   Se o `kubeseal` só selar o primeiro documento do arquivo, sele um
+   Secret por vez e junte os resultados separados por `---`.
 
 ## Pré-requisitos
 
+- ArgoCD instalado (repositório `argocd`), com o Sealed Secrets do
+  `core-config`
 - `ingress-nginx` e `cert-manager` instalados (repositórios `argocd` e
   `cert-manager`) e DNS `ia.diegofnunesbr.com` apontando pro node
   (repositório `dns`)
+- Imagens `ia/agent-backend:latest` e `ia/web-frontend:latest` já
+  importadas no containerd do k0s (seção "Build das imagens")
 
 ## Deploy
 
+Tudo em `k8s/` (menos `secrets.example.yaml`) é aplicado pelo Argo CD:
+
 ```bash
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/network-policy.yaml
-kubectl apply -f k8s/network-policy-ingress.yaml
-kubectl apply -f k8s/postgres.yaml
-kubectl apply -f k8s/ollama.yaml
-kubectl apply -f k8s/agent-backend.yaml
-kubectl apply -f k8s/web-frontend.yaml
+kubectl apply -f applications/argocd.ia.yaml
 ```
+
+**Lembrete:** a Application aponta pro GitHub, não pro clone local -
+mudança em `k8s/` só tem efeito depois de `git push`. Imagem nova (mesma
+tag `latest`) não é detectada pelo Argo CD: depois de rebuild + import,
+rode `kubectl -n ia rollout restart deployment/<nome>`.
 
 ## Documentos e imagens no chat (OCR local)
 
