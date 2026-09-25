@@ -2,12 +2,10 @@ import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { parse as parseCookie, serialize as serializeCookie } from 'cookie'
 
-// Single-user login (username + password) - no SSO/subdomain needed since
-// everything lives behind this one origin (web-frontend's nginx proxies
-// /api/ here, so the session cookie just works with the Ingress hostname).
 const USERNAME = process.env.AUTH_USERNAME
 const PASSWORD_HASH = process.env.AUTH_PASSWORD_HASH
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
+const TRUST_PROXY_HEADER = (process.env.TRUST_PROXY_HEADER || '').toLowerCase()
 
 if (!USERNAME || !PASSWORD_HASH) {
   throw new Error('AUTH_USERNAME and AUTH_PASSWORD_HASH must both be set')
@@ -56,7 +54,12 @@ export function getSessionToken(req) {
   return parseCookie(header)[SESSION_COOKIE] || null
 }
 
+export function isProxyAuthenticated(req) {
+  return Boolean(TRUST_PROXY_HEADER && req.headers[TRUST_PROXY_HEADER])
+}
+
 export function requireAuth(req, res, next) {
+  if (isProxyAuthenticated(req)) return next()
   const token = getSessionToken(req)
   if (token && isValidSession(token)) return next()
   res.status(401).json({ error: 'não autenticado' })

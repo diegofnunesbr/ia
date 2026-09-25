@@ -489,7 +489,12 @@ loginForm.addEventListener('submit', async (e) => {
 
 logoutBtn.addEventListener('click', async () => {
   try {
-    await fetch('/api/logout', { method: 'POST' })
+    const res = await fetch('/api/logout', { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
+    if (data.redirect) {
+      location.href = data.redirect
+      return
+    }
   } catch (err) {
     console.error(err)
   }

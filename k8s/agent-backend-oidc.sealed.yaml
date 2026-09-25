@@ -1,0 +1,20 @@
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  annotations:
+    sealedsecrets.bitnami.com/cluster-wide: "true"
+  creationTimestamp: null
+  name: agent-backend-oidc
+  namespace: ia
+spec:
+  encryptedData:
+    clientSecret: AgB1pGSxlgBe9bymw95C8t9DXRGtqIqCx4lFvN4AFbHkqJNgeXaKBcptHR7tml9uIm2TOL3nj44wZZvqJ3236nXFnFL+sjUqvO4endPXw/+jvCphb8uCqEwbqPV38UAZkynmuDw2LqTNxXMlMP5OLqvx/wQ93xWbwdshrtEyacMRDvjlg+N8SqY2l80sMJ+i/kGc1ZgDthBaQko64ivKCW7zGKktVQVZEY1/mPQVAVszlMwPCUCYKYnWl/qetGpD4IYdkxddCi5eo7ZMG2asMy0G13e+plx35B6IldNlvZXejyZkt2PyS9rz/snZ9PE9j8baYfeCMahCgxTJmh6kCweDR8Dn2wJ7YkrzjbP6TOj5OjntdMa4BRm85tPM7PqOIXGiGa3dbuMOfTPrluobU9EPPNT6+hIS2cOEJL9kQ8MrX0DPaEz5y/GRWrMJF57zKa3R8XOBUHLdwi3lMy9mWTMaJmOkStbYc8ll6JvdFZLrnk3Er7FNCSuo4aPj26iP/bCXssKhHYZ634LDa2mEfw1TgsAKUZpWXAJLt9y3K0m4uMKqffp8vP1ljGw1T0OBJG/qXPARc32CkkqV1/9RAdiNLzqpEKshycpUUpjJeXMKIs/Ft/Kv+5dbpoZq0rKkQH6lLgU1e0o/rI1GjDaSW8Hjec6A2D1z2GXYxk0fjXEffJUH5X6tOJvpcDO1BnO90DvlTf+oOi6UcVAhKCiDunww0CNQADznH/wR99EZEMRSo0cRHjAXsMUtBTMi2hKyIdjxdFUB5zPg2JnQ/nty1wLDdDd2b0KzVFzSMNX864yooDpaQaWE+Q==
+    cookieSecret: AgBGgt+cGqu9VMffrpMyqJg98ApmkHRkrpWU7ol01xJZXyK2iOmET3cZiSUpiAeAW9WLuD79rp76d8QkfA1EWcPbVRb1KM942WtPay6Yp9G8flqf31nd7I6Nm2RG41WULdA4fdxgOFax3yQwYgcdXavrth4Jcn9bS8mkFNOj+CsFCbrpUaZfmE8Ikco2wQSPF8ga52R7KRrXuX7mw3iIgOpffJ4JKxyTAZ54tCzAaIw8EmhVpH2MNdOZYxa/Qy7NZvhM+dmgGJmBELfLXt3ZY9U+DATELw6Fm2X3KR29E4HfT1myDG62BkGWt1MRoK748rUQ49H36wKjvtrmbl83G4rKD4f47KN6jVIR5DIXMlLxYpm6GQXa2oh0d/kiITJ+dspeogXmMqgvtxWPD4T/4Fc0M0tYYJDpk/lYFbZ45DRp+/GdMHz5OHHvN2aHq3jzcnPoUVbAaDIaT9Ib5/JnB784r5dhdo5jmrTqKURudNjRpYjYtP9OUqt8jxKyYNRcUc/j3SyEijdGjTdMlvbUyluWT2skky0dStdVIi7Swqw6a6NsMisBuzX8ZYDWI1OWUY4lyU6H7On+PyXSNJSVhZw28tNYBckEWkj1q+ew5bpskeu6STVbBiwujxy/YIgkGtzYwQY2imvtzHonrMBPi8oT6Jty2Xm2OtUCcG1nT7jolILa89kXCiciZULjR9h0KTW+zw9H2QczdqRsy/3w9lx6TDRBHbvKhisFJQOqaTSFxQ==
+  template:
+    metadata:
+      annotations:
+        sealedsecrets.bitnami.com/cluster-wide: "true"
+      creationTimestamp: null
+      name: agent-backend-oidc
+      namespace: ia
+

@@ -27,6 +27,42 @@ spec:
               cpu: 200m
               memory: 128Mi
 
+        - name: oauth2-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.4
+          imagePullPolicy: IfNotPresent
+
+          args:
+            - --http-address=0.0.0.0:4180
+            - --upstream=http://127.0.0.1:80/
+            - --provider=oidc
+            - --oidc-issuer-url=https://keycloak.diegofnunesbr.com/realms/home
+            - --redirect-url=https://ia.diegofnunesbr.com/oauth2/callback
+            - --email-domain=*
+            - --allowed-group=ia-users
+            - --pass-user-headers=true
+            - --skip-provider-button=true
+            - --cookie-secure=true
+            - --whitelist-domain=keycloak.diegofnunesbr.com
+
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              value: ia
+
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-oidc
+                  key: clientSecret
+
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: agent-backend-oidc
+                  key: cookieSecret
+
+          ports:
+            - containerPort: 4180
+
 ---
 apiVersion: v1
 kind: Service
@@ -38,7 +74,12 @@ spec:
   selector:
     app: web-frontend
   ports:
-    - port: 80
+    - name: web
+      port: 4180
+      targetPort: 4180
+
+    - name: direct
+      port: 80
       targetPort: 80
 
 ---
@@ -54,6 +95,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
 spec:
   ingressClassName: nginx
   tls:
@@ -70,4 +112,4 @@ spec:
               service:
                 name: web-frontend
                 port:
-                  number: 80
+                  number: 4180

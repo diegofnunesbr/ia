@@ -3,9 +3,9 @@
 App de chat (texto + voz) acessível via `https://ia.diegofnunesbr.com`,
 100% local: o LLM roda no seu próprio cluster via Ollama, sem nenhuma
 chamada para a internet - por isso é seguro colocar senhas/dados
-sensíveis na conversa. Login com usuário e senha é feito direto no
-`agent-backend` (ver `agent-backend/auth.js`), sem depender de
-subdomínio/SSO externo. Já
+sensíveis na conversa. Login pelo Keycloak (SSO, ver seção abaixo); o
+login próprio do `agent-backend` (usuário/senha, `agent-backend/auth.js`)
+continua existindo como plano B. Já
 tem upload de documento/imagem com OCR local; smart home, câmeras e
 impressoras ainda não estão conectadas.
 
@@ -173,13 +173,36 @@ nada saia para a internet.
   cluster/rede conseguia chamar essas rotas direto, pulando o login.
   Ajuste o label `kubernetes.io/metadata.name: ingress-nginx` nesse
   arquivo se o seu namespace do ingress-nginx tiver outro nome.
-- **Login obrigatório**: usuário e senha são checados em
-  `agent-backend/auth.js`, gate próprio (sem depender de Authelia/SSO
-  externo nem de um subdomínio à parte). O hash da senha fica em Secret
-  (`agent-backend-auth-secrets`),
-  nunca em texto puro no código - compensação necessária por sair de
-  "só rede local" pra um domínio público (`ia.diegofnunesbr.com`)
+- **Login obrigatório**: pelo Keycloak (ver seção abaixo), com o login
+  próprio de `agent-backend/auth.js` (usuário/senha, hash em Secret
+  `agent-backend-auth-secrets`) como plano B - compensação necessária por
+  sair de "só rede local" pra um domínio público (`ia.diegofnunesbr.com`)
   resolvendo pro mesmo IP privado.
+
+## Login pelo Keycloak (SSO)
+
+Um sidecar [`oauth2-proxy`](https://oauth2-proxy.github.io/oauth2-proxy/)
+no pod do `web-frontend` autentica contra o realm `home` do Keycloak
+(repositório `keycloak`, `https://keycloak.diegofnunesbr.com`) antes de
+qualquer requisição chegar no app - mesmo padrão do repositório
+`rundeck`. Só quem estiver no grupo `ia-users` do Keycloak entra
+(`--allowed-group`).
+
+Como o `ia` tem login próprio (usuário/senha, ver "Login obrigatório"
+acima), em vez de empilhar os dois logins o `agent-backend` foi ajustado
+pra confiar no usuário já autenticado pelo proxy: o oauth2-proxy injeta o
+header `X-Forwarded-Preferred-Username` (`--pass-user-headers`), que o
+nginx do `web-frontend` repassa ao proxear `/api/` pro `agent-backend`
+sem alterar; quando esse header chega, `/api/me` responde autenticado e
+`web-frontend/script.js` nem mostra a tela de login local. "Sair" nesse
+caso redireciona pro logout do Keycloak (`PROXY_LOGOUT_URL`), não só
+limpa a sessão local.
+
+Pra dar acesso a alguém: no Keycloak, realm `home`, coloque o usuário no
+grupo `ia-users`.
+
+O client secret do Keycloak e o cookie secret do oauth2-proxy ficam
+selados em `k8s/agent-backend-oidc.sealed.yaml`.
 
 ## Hardware
 

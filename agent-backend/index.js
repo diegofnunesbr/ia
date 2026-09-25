@@ -10,6 +10,7 @@ import {
   destroySession,
   isValidSession,
   requireAuth,
+  isProxyAuthenticated,
   setSessionCookie,
   clearSessionCookie,
   getSessionToken,
@@ -36,6 +37,7 @@ const DOCUMENT_MAX_CHARS = 6000
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } })
 const OWNER_NAME = process.env.OWNER_NAME || 'seu usuário'
 const AI_NAME = process.env.AI_NAME || 'assistente'
+const PROXY_LOGOUT_URL = process.env.PROXY_LOGOUT_URL || ''
 
 const SYSTEM_PROMPT = `Seu nome é ${AI_NAME}. Você é o assistente pessoal de ${OWNER_NAME},
 chat com texto e voz. Se perguntarem seu nome, responda "${AI_NAME}" - nunca
@@ -177,6 +179,7 @@ app.post('/login', (req, res) => {
 })
 
 app.get('/me', (req, res) => {
+  if (isProxyAuthenticated(req)) return res.json({ authenticated: true })
   const token = getSessionToken(req)
   res.json({ authenticated: Boolean(token) && isValidSession(token) })
 })
@@ -185,6 +188,9 @@ app.post('/logout', (req, res) => {
   const token = getSessionToken(req)
   if (token) destroySession(token)
   clearSessionCookie(res)
+  if (isProxyAuthenticated(req) && PROXY_LOGOUT_URL) {
+    return res.json({ ok: true, redirect: PROXY_LOGOUT_URL })
+  }
   res.json({ ok: true })
 })
 
