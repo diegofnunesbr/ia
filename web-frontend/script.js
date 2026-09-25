@@ -31,19 +31,26 @@ function newSessionId() {
   return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)
 }
 
+// Accept: application/json makes oauth2-proxy answer 401 for an
+// unauthenticated request instead of a 302 to Keycloak's login page -
+// a redirect that fetch() can't complete like a real page navigation.
+function apiFetch(url, opts = {}) {
+  return fetch(url, { ...opts, headers: { Accept: 'application/json', ...(opts.headers || {}) } })
+}
+
 function setCurrentSession(id) {
   sessionId = id
   localStorage.setItem(CURRENT_SESSION_KEY, id)
 }
 
 async function fetchSessions() {
-  const res = await fetch('/api/sessions')
+  const res = await apiFetch('/api/sessions')
   const data = await res.json()
   return data.sessions || []
 }
 
 async function fetchSessionMessages(id) {
-  const res = await fetch(`/api/sessions/${encodeURIComponent(id)}/messages`)
+  const res = await apiFetch(`/api/sessions/${encodeURIComponent(id)}/messages`)
   const data = await res.json()
   return data.messages || []
 }
@@ -177,7 +184,7 @@ async function submitEdit(el, newText) {
   const typingEl = addTypingIndicator()
 
   try {
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages/${messageId}/edit`, {
+    const res = await apiFetch(`/api/sessions/${encodeURIComponent(sessionId)}/messages/${messageId}/edit`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ text: newText }),
@@ -228,7 +235,7 @@ async function renderSessionList() {
     delBtn.addEventListener('click', async (e) => {
       e.stopPropagation()
       if (!confirm('Excluir essa conversa?')) return
-      await fetch(`/api/sessions/${encodeURIComponent(s.id)}`, { method: 'DELETE' })
+      await apiFetch(`/api/sessions/${encodeURIComponent(s.id)}`, { method: 'DELETE' })
       if (s.id === sessionId) await startNewSession()
       renderSessionList()
     })
@@ -324,7 +331,7 @@ async function sendMessage(text, viaVoice = false) {
   const typingEl = addTypingIndicator()
 
   try {
-    const res = await fetch('/api/message', {
+    const res = await apiFetch('/api/message', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ from: sessionId, text }),
@@ -385,7 +392,7 @@ fileInput.addEventListener('change', async () => {
   formData.append('file', file)
 
   try {
-    const res = await fetch('/api/upload', { method: 'POST', body: formData })
+    const res = await apiFetch('/api/upload', { method: 'POST', body: formData })
     const data = await res.json()
     if (!res.ok) {
       addMessage('assistant', data.error || 'Não consegui ler esse arquivo.')
@@ -466,7 +473,7 @@ loginForm.addEventListener('submit', async (e) => {
   e.preventDefault()
   loginError.hidden = true
   try {
-    const res = await fetch('/api/login', {
+    const res = await apiFetch('/api/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ username: loginUsername.value, password: loginPassword.value }),
@@ -489,7 +496,7 @@ loginForm.addEventListener('submit', async (e) => {
 
 logoutBtn.addEventListener('click', async () => {
   try {
-    const res = await fetch('/api/logout', { method: 'POST' })
+    const res = await apiFetch('/api/logout', { method: 'POST' })
     const data = await res.json().catch(() => ({}))
     if (data.redirect) {
       location.href = data.redirect
@@ -505,7 +512,7 @@ logoutBtn.addEventListener('click', async () => {
 // showing anything - avoids a flash of the chat UI for a logged-out visitor.
 ;(async () => {
   try {
-    const res = await fetch('/api/me')
+    const res = await apiFetch('/api/me')
     const data = await res.json()
     if (data.authenticated) {
       showApp()
