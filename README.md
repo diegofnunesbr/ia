@@ -162,7 +162,12 @@ Encrypt, renovado automaticamente pelo cert-manager).
 
 `k8s/network-policy.yaml` bloqueia todo egress externo do namespace
 (só permite DNS e tráfego entre pods do cluster) - é o que garante que
-nada saia para a internet.
+nada saia para a internet. Exceção: o `web-frontend` (oauth2-proxy) tem
+liberação explícita pra falar com o Keycloak na porta 443 do próprio
+node (`192.168.0.4`) - necessária porque `keycloak.diegofnunesbr.com`
+resolve pro IP do node (o ingress-nginx escuta via `hostNetwork`), e o
+`namespaceSelector` genérico não reconhece esse caminho de forma
+confiável no kube-router.
 
 ## Segurança (hardening antes do deploy)
 

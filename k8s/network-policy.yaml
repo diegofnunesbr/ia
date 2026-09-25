@@ -17,3 +17,23 @@ spec:
           port: 53
     - to:
         - namespaceSelector: {}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-frontend-keycloak-egress
+  namespace: ia
+spec:
+  podSelector:
+    matchLabels:
+      app: web-frontend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.0.4/32
+      ports:
+        - protocol: TCP
+          port: 443
