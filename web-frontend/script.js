@@ -494,18 +494,8 @@ loginForm.addEventListener('submit', async (e) => {
   }
 })
 
-logoutBtn.addEventListener('click', async () => {
-  try {
-    const res = await apiFetch('/api/logout', { method: 'POST' })
-    const data = await res.json().catch(() => ({}))
-    if (data.redirect) {
-      location.href = data.redirect
-      return
-    }
-  } catch (err) {
-    console.error(err)
-  }
-  location.reload()
+logoutBtn.addEventListener('click', () => {
+  location.href = '/api/logout'
 })
 
 // Init: check whether there's already a valid session cookie before

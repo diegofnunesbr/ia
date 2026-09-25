@@ -184,14 +184,11 @@ app.get('/me', (req, res) => {
   res.json({ authenticated: Boolean(token) && isValidSession(token) })
 })
 
-app.post('/logout', (req, res) => {
+app.get('/logout', (req, res) => {
   const token = getSessionToken(req)
   if (token) destroySession(token)
   clearSessionCookie(res)
-  if (isProxyAuthenticated(req) && PROXY_LOGOUT_URL) {
-    return res.json({ ok: true, redirect: PROXY_LOGOUT_URL })
-  }
-  res.json({ ok: true })
+  res.redirect(303, (isProxyAuthenticated(req) && PROXY_LOGOUT_URL) || '/')
 })
 
 app.use(requireAuth)
