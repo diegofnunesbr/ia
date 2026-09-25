@@ -37,6 +37,7 @@ spec:
             - --provider=oidc
             - --oidc-issuer-url=https://keycloak.diegofnunesbr.com/realms/home
             - --redirect-url=https://ia.diegofnunesbr.com/oauth2/callback
+            - --scope=openid email profile
             - --email-domain=*
             - --allowed-group=ia-users
             - --pass-user-headers=true
