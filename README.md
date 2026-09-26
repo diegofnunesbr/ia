@@ -187,7 +187,7 @@ confiável no kube-router.
 ## Login pelo Keycloak (SSO)
 
 Um sidecar [`oauth2-proxy`](https://oauth2-proxy.github.io/oauth2-proxy/)
-no pod do `web-frontend` autentica contra o realm `home` do Keycloak
+no pod do `web-frontend` autentica contra o realm `homelab` do Keycloak
 (repositório `keycloak`, `https://keycloak.diegofnunesbr.com`) antes de
 qualquer requisição chegar no app - mesmo padrão do repositório
 `rundeck`. Só quem estiver no grupo `ia-users` do Keycloak entra
@@ -203,7 +203,7 @@ sem alterar; quando esse header chega, `/api/me` responde autenticado e
 caso redireciona pro logout do Keycloak (`PROXY_LOGOUT_URL`), não só
 limpa a sessão local.
 
-Pra dar acesso a alguém: no Keycloak, realm `home`, coloque o usuário no
+Pra dar acesso a alguém: no Keycloak, realm `homelab`, coloque o usuário no
 grupo `ia-users`.
 
 O client secret do Keycloak e o cookie secret do oauth2-proxy ficam
